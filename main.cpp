@@ -1,8 +1,4 @@
 ﻿#include "main.h"
-#include <thread>
-#include <vector>
-#include <atomic>
-#include <random>
 
 real_type intersect_AABB(const vector_3 min_location, const vector_3 max_location, const vector_3 ray_origin, const vector_3 ray_dir, real_type& tmin, real_type& tmax)
 {
@@ -166,16 +162,16 @@ vector_3 random_cosine_weighted_hemisphere(const vector_3& normal)
 	// Transform from local coordinates
 	// to world coordinates
 	vector_3 result;
-	result.x = tangent.x * x +
-		bitangent.x * y +
+	result.x = tangent.x * x + 
+		bitangent.x * y + 
 		n.x * z;
 
-	result.y = tangent.y * x +
-		bitangent.y * y +
+	result.y = tangent.y * x + 
+		bitangent.y * y + 
 		n.y * z;
 
-	result.z = tangent.z * x +
-		bitangent.z * y +
+	result.z = tangent.z * x + 
+		bitangent.z * y + 
 		n.z * z;
 
 	return result.normalize();
@@ -189,114 +185,46 @@ real_type get_intersecting_line_density(
 	const real_type receiver_distance_plus,
 	const real_type receiver_radius)
 {
-	if (n == 0) return 0.0;
+	real_type count = 0;
+	real_type count_plus = 0;
 
-	const unsigned long long batch_size = 100000000ULL;
-	size_t num_threads = std::thread::hardware_concurrency();
-	real_type total_count = 0.0;
-	real_type total_count_plus = 0.0;
-	unsigned long long remaining = n;
-	unsigned long long completed = 0;
+	generator.seed(static_cast<unsigned>(0));
 
-	while (remaining > 0) {
-		unsigned long long curr_batch = std::min(batch_size, remaining);
+	for (long long unsigned int i = 0; i < n; i++)
+	{
+		if (i % 100000000 == 0)
+			cout << float(i) / float(n) << endl;
 
-		std::vector<std::thread> threads;
-		std::atomic<real_type> batch_count{ 0.0 };
-		std::atomic<real_type> batch_count_plus{ 0.0 };
+		// Random hemisphere outward
+		vector_3 location = random_unit_vector();
 
-		unsigned long long rays_per_thread = curr_batch / num_threads;
-		unsigned long long extra_rays = curr_batch % num_threads;
-		unsigned long long th_start = 0;
+		location.x *= emitter_radius;
+		location.y *= emitter_radius;
+		location.z *= emitter_radius;
 
-		for (size_t t = 0; t < num_threads; ++t) {
-			unsigned long long th_size = rays_per_thread + (t < extra_rays ? 1ULL : 0ULL);
-			if (th_size == 0) continue;
+		vector_3 surface_normal = location;
+		surface_normal.normalize();
 
-			threads.emplace_back([&](unsigned long long ts, unsigned long long te) {
-				std::random_device rd;
-				std::mt19937 gen(rd());
-				std::uniform_real_distribution<real_type> local_dis(0.0, 1.0);
+		vector_3 normal = 
+			random_cosine_weighted_hemisphere(
+				surface_normal);
 
-				real_type lcount = 0.0;
-				real_type lcplus = 0.0;
+		std::optional<real_type> i_hit = intersect(
+			location, normal, 
+			receiver_distance, receiver_radius);
 
-				for (unsigned long long j = ts; j < te; ++j) {
-					// Generate random unit vector for location
-					real_type z_loc = local_dis(gen) * 2.0 - 1.0;
-					real_type a_loc = local_dis(gen) * 2.0 * pi;
-					real_type r_loc = sqrt(1.0 - z_loc * z_loc);
-					real_type x_loc = r_loc * cos(a_loc);
-					real_type y_loc = r_loc * sin(a_loc);
-					vector_3 loc(x_loc, y_loc, z_loc);
-					loc.x *= emitter_radius;
-					loc.y *= emitter_radius;
-					loc.z *= emitter_radius;
+		if (i_hit)
+			count += *i_hit / (2.0 * receiver_radius);
+	
+		i_hit = intersect(
+			location, normal,
+			receiver_distance_plus, receiver_radius);
 
-					vector_3 sn = loc;
-					sn.normalize();
-
-					// Generate cosine-weighted hemisphere direction
-					real_type u1 = local_dis(gen);
-					real_type u2 = local_dis(gen);
-					real_type r_hem = sqrt(u1);
-					real_type theta_hem = 2.0 * pi * u2;
-					real_type x_hem = r_hem * cos(theta_hem);
-					real_type y_hem = r_hem * sin(theta_hem);
-					real_type z_hem = sqrt(1.0 - u1);
-
-					vector_3 arb;
-					if (fabs(sn.x) > 0.9) {
-						arb = vector_3(0, 1, 0);
-					}
-					else {
-						arb = vector_3(1, 0, 0);
-					}
-
-					vector_3 tan1 = sn.cross(arb);
-					tan1.normalize();
-					vector_3 tan2 = sn.cross(tan1);
-					tan2.normalize();
-
-					vector_3 dir;
-					dir.x = tan1.x * x_hem + tan2.x * y_hem + sn.x * z_hem;
-					dir.y = tan1.y * x_hem + tan2.y * y_hem + sn.y * z_hem;
-					dir.z = tan1.z * x_hem + tan2.z * y_hem + sn.z * z_hem;
-					dir.normalize();
-
-					// Intersect
-					auto hit = intersect(loc, dir, receiver_distance, receiver_radius);
-					if (hit.has_value()) {
-						lcount += hit.value() / (2.0 * receiver_radius);
-					}
-
-					hit = intersect(loc, dir, receiver_distance_plus, receiver_radius);
-					if (hit.has_value()) {
-						lcplus += hit.value() / (2.0 * receiver_radius);
-					}
-				}
-
-				batch_count.fetch_add(lcount);
-				batch_count_plus.fetch_add(lcplus);
-				}, th_start, th_start + th_size);
-
-			th_start += th_size;
-		}
-
-		for (auto& th : threads) {
-			th.join();
-		}
-
-		total_count += batch_count.load();
-		total_count_plus += batch_count_plus.load();
-
-		completed += curr_batch;
-		remaining -= curr_batch;
-
-		cout << float(completed) / float(n) << endl;
+		if (i_hit)
+			count_plus += *i_hit / (2.0 * receiver_radius);
 	}
 
-	return total_count_plus - total_count;
+	return count_plus - count;
 }
 
 int main(int argc, char** argv)
@@ -304,10 +232,10 @@ int main(int argc, char** argv)
 	ofstream outfile("ratio");
 
 	const real_type emitter_radius_geometrized =
-		sqrt(1e9 * log(2.0) / pi);
+		sqrt(1e8 * log(2.0) / pi);
 
 	const real_type receiver_radius_geometrized =
-		emitter_radius_geometrized * 1; // Minimum one Planck unit
+		emitter_radius_geometrized * 0.01; // Minimum one Planck unit
 
 	const real_type emitter_area_geometrized =
 		4.0 * pi
@@ -329,7 +257,7 @@ int main(int argc, char** argv)
 
 	real_type end_pos = start_pos * 10;
 
-	swap(end_pos, start_pos);
+	//swap(end_pos, start_pos);
 
 	const size_t pos_res = 10; // Minimum 2 steps
 
@@ -414,3 +342,7 @@ int main(int argc, char** argv)
 	}
 
 }
+
+
+
+
