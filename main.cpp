@@ -162,16 +162,16 @@ vector_3 random_cosine_weighted_hemisphere(const vector_3& normal)
 	// Transform from local coordinates
 	// to world coordinates
 	vector_3 result;
-	result.x = tangent.x * x + 
-		bitangent.x * y + 
+	result.x = tangent.x * x +
+		bitangent.x * y +
 		n.x * z;
 
-	result.y = tangent.y * x + 
-		bitangent.y * y + 
+	result.y = tangent.y * x +
+		bitangent.y * y +
 		n.y * z;
 
-	result.z = tangent.z * x + 
-		bitangent.z * y + 
+	result.z = tangent.z * x +
+		bitangent.z * y +
 		n.z * z;
 
 	return result.normalize();
@@ -205,23 +205,23 @@ real_type get_intersecting_line_density(
 		vector_3 surface_normal = location;
 		surface_normal.normalize();
 
-		vector_3 normal = 
+		vector_3 normal =
 			random_cosine_weighted_hemisphere(
 				surface_normal);
 
 		std::optional<real_type> i_hit = intersect(
-			location, normal, 
+			location, normal,
 			receiver_distance, receiver_radius);
 
 		if (i_hit)
-			count += *i_hit / (2.0 * receiver_radius);
-	
+			count += *i_hit;
+
 		i_hit = intersect(
 			location, normal,
 			receiver_distance_plus, receiver_radius);
 
 		if (i_hit)
-			count_plus += *i_hit / (2.0 * receiver_radius);
+			count_plus += *i_hit;
 	}
 
 	return count_plus - count;
@@ -232,7 +232,7 @@ int main(int argc, char** argv)
 	ofstream outfile("ratio");
 
 	const real_type emitter_radius_geometrized =
-		sqrt(1e8 * log(2.0) / pi);
+		sqrt(1e11 * log(2.0) / pi);
 
 	const real_type receiver_radius_geometrized =
 		emitter_radius_geometrized * 0.01; // Minimum one Planck unit
@@ -295,9 +295,9 @@ int main(int argc, char** argv)
 		real_type gradient_strength =
 			-gradient_integer
 			/
-			(receiver_radius_geometrized
+			(2.0 * receiver_radius_geometrized
 				* receiver_radius_geometrized
-				);
+				* receiver_radius_geometrized);
 
 		//cout << gradient_strength << " " << n_geometrized / (2 * pow(receiver_distance_geometrized, 3.0)) << endl;
 		//cout << gradient_strength / (n_geometrized / (2 * pow(receiver_distance_geometrized, 3.0))) << endl;
