@@ -257,7 +257,6 @@ int main(int argc, char** argv)
 
 	real_type end_pos = start_pos * 10;
 
-	//swap(end_pos, start_pos);
 
 	const size_t pos_res = 10; // Minimum 2 steps
 
@@ -299,10 +298,6 @@ int main(int argc, char** argv)
 				* receiver_radius_geometrized
 				* receiver_radius_geometrized);
 
-		//cout << gradient_strength << " " << n_geometrized / (2 * pow(receiver_distance_geometrized, 3.0)) << endl;
-		//cout << gradient_strength / (n_geometrized / (2 * pow(receiver_distance_geometrized, 3.0))) << endl;
-
-
 		const real_type a_Newton_geometrized =
 			sqrt(
 				n_geometrized * log(2.0)
@@ -314,12 +309,6 @@ int main(int argc, char** argv)
 		const real_type a_flat_geometrized =
 			gradient_strength * receiver_distance_geometrized * log(2)
 			/ (8.0 * emitter_mass_geometrized);
-
-
-		//const real_type g_approx = n_geometrized / (2 * pow(receiver_distance_geometrized, 3.0));
-		//const real_type a_approx_geometrized =
-		//	g_approx * receiver_distance_geometrized * log(2)
-		//	/ (8.0 * emitter_mass_geometrized);
 
 
 		const real_type dt_Schwarzschild = sqrt(1 - emitter_radius_geometrized / receiver_distance_geometrized);
