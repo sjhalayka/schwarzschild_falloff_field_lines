@@ -6,6 +6,7 @@
 #include <cmath>
 #include <string>
 #include <algorithm>
+#include <cstdint>     // uint64_t etc
 
 using namespace std;
 
@@ -21,121 +22,35 @@ const double PI_D = 3.14159265358979323846LF;
 const double TWO_PI_D = 6.28318530717958647692LF;
 const double HALF_PI_D = 1.57079632679489661923LF;
 
-// Range reduction: bring angle to [-PI, PI]
-double reduceAngle(double x) {
-    x = mod(x + PI_D, TWO_PI_D);
-    if (x < 0.0LF)
-        x += TWO_PI_D;
-    return x - PI_D;
-}
-
-// Double-precision sine using Taylor series
-double sin(double x) {
-    x = reduceAngle(x);
+dvec2 cexp_i(double x) {
+    dvec2 result = dvec2(1.0, 0.0);
+    dvec2 term = dvec2(1.0, 0.0);
     
-    double x2 = x * x;
-    double result = x;
-    double term = x;
-    
-    // Taylor series
-    term *= -x2 / (2.0LF * 3.0LF);
-    result += term;
-    
-    term *= -x2 / (4.0LF * 5.0LF);
-    result += term;
-    
-    term *= -x2 / (6.0LF * 7.0LF);
-    result += term;
-    
-    term *= -x2 / (8.0LF * 9.0LF);
-    result += term;
-    
-    term *= -x2 / (10.0LF * 11.0LF);
-    result += term;
-    
-    term *= -x2 / (12.0LF * 13.0LF);
-    result += term;
-    
-    term *= -x2 / (14.0LF * 15.0LF);
-    result += term;
-    
-    term *= -x2 / (16.0LF * 17.0LF);
-    result += term;
-    
+    for (int n = 1; n <= 32; n++) {
+        // Multiply term by (ix / n)
+        // (a + bi) * i = -b + ai
+        double factor = x / double(n);
+        term = dvec2(-term.y * factor, term.x * factor);
+        result += term;
+    }
     return result;
 }
 
-// Double-precision cosine using Taylor series
+// cos(x) = (e^ix + e^-ix) / 2
 double cos(double x) {
-    x = reduceAngle(x);
-    
-    double x2 = x * x;
-    double result = 1.0LF;
-    double term = 1.0LF;
-    
-    // Taylor series.
-    term *= -x2 / (1.0LF * 2.0LF);
-    result += term;
-    
-    term *= -x2 / (3.0LF * 4.0LF);
-    result += term;
-    
-    term *= -x2 / (5.0LF * 6.0LF);
-    result += term;
-    
-    term *= -x2 / (7.0LF * 8.0LF);
-    result += term;
-    
-    term *= -x2 / (9.0LF * 10.0LF);
-    result += term;
-    
-    term *= -x2 / (11.0LF * 12.0LF);
-    result += term;
-    
-    term *= -x2 / (13.0LF * 14.0LF);
-    result += term;
-    
-    term *= -x2 / (15.0LF * 16.0LF);
-    result += term;
-    
-    return result;
+    dvec2 eix = cexp_i(x);
+    dvec2 enix = cexp_i(-x);
+    return (eix.x + enix.x) * 0.5;
 }
 
-// Convenience: compute both at once (more efficient)
-void sincos_d(double x, out double s, out double c) {
-    x = reduceAngle(x);
-    
-    double x2 = x * x;
-    
-    // Sine
-    double s_result = x;
-    double s_term = x;
-    
-    s_term *= -x2 / 6.0LF;    s_result += s_term;
-    s_term *= -x2 / 20.0LF;   s_result += s_term;
-    s_term *= -x2 / 42.0LF;   s_result += s_term;
-    s_term *= -x2 / 72.0LF;   s_result += s_term;
-    s_term *= -x2 / 110.0LF;  s_result += s_term;
-    s_term *= -x2 / 156.0LF;  s_result += s_term;
-    s_term *= -x2 / 210.0LF;  s_result += s_term;
-    s_term *= -x2 / 272.0LF;  s_result += s_term;
-    
-    // Cosine
-    double c_result = 1.0LF;
-    double c_term = 1.0LF;
-    
-    c_term *= -x2 / 2.0LF;    c_result += c_term;
-    c_term *= -x2 / 12.0LF;   c_result += c_term;
-    c_term *= -x2 / 30.0LF;   c_result += c_term;
-    c_term *= -x2 / 56.0LF;   c_result += c_term;
-    c_term *= -x2 / 90.0LF;   c_result += c_term;
-    c_term *= -x2 / 132.0LF;  c_result += c_term;
-    c_term *= -x2 / 182.0LF;  c_result += c_term;
-    c_term *= -x2 / 240.0LF;  c_result += c_term;
-    
-    s = s_result;
-    c = c_result;
+// sin(x) = (e^ix - e^-ix) / 2i
+double sin(double x) {
+    dvec2 eix = cexp_i(x);
+    dvec2 enix = cexp_i(-x);
+    // Dividing by 2i extracts the imaginary part divided by 2
+    return (eix.y - enix.y) * 0.5;
 }
+
 
 
 
@@ -310,6 +225,11 @@ double intersect(dvec3 location, dvec3 normal, double recv_distance, double recv
     return intersect_AABB(min_location, max_location, location, normal);
 }
 
+
+
+
+
+
 void main() {
     uint gid = gl_GlobalInvocationID.x;
     
@@ -452,56 +372,45 @@ double reduceBuffer(GLuint buffer, GLuint size) {
 }
 
 double get_intersecting_line_density_gpu(
-    unsigned long long n,
+    uint64_t total_samples,                     // ← changed
     double emitter_radius,
     double receiver_distance,
     double receiver_distance_plus,
     double receiver_radius)
 {
-    const int NUM_BATCHES = 20;
-    GLuint totalSamples = static_cast<GLuint>(n);
-    GLuint samplesPerBatch = (totalSamples + NUM_BATCHES - 1) / NUM_BATCHES;
+    // We will process in chunks no larger than what fits comfortably in GLuint
+    const uint64_t MAX_SAMPLES_PER_DISPATCH = 1ULL << 28;   // 268 million — safe & fast on most GPUs
+    // Feel free to increase to 1ULL<<29 or even 1ULL<<30 if GPU has enough memory
 
-    double total_count = 0.0;
-    double total_count_plus = 0.0;
+    double sum = 0.0;
+    double sum_plus = 0.0;
 
-    for (int batch = 0; batch < NUM_BATCHES; batch++) {
-        GLuint batchStart = batch * samplesPerBatch;
-        GLuint batchSize = min(samplesPerBatch, totalSamples - batchStart);
-        if (batchSize == 0) break;
+    uint64_t remaining = total_samples;
+    uint32_t seed_offset = 0;
 
-        GLuint numGroups = (batchSize + 255) / 256;
+    while (remaining > 0)
+    {
+        uint64_t batch_size = std::min(remaining, MAX_SAMPLES_PER_DISPATCH);
+        GLuint numSamplesGL = static_cast<GLuint>(batch_size);   // safe now
 
-        // Print progress
-        int percent = (batch * 100) / NUM_BATCHES;
-        int bar_width = 30;
-        int filled = (batch * bar_width) / NUM_BATCHES;
+        GLuint numGroups = (numSamplesGL + 255u) / 256u;
 
-        cout << "\r    GPU: [";
-        for (int b = 0; b < bar_width; b++) {
-            if (b < filled) cout << "=";
-            else if (b == filled) cout << ">";
-            else cout << " ";
-        }
-        cout << "] " << percent << "% ("
-            << (batchStart / 1000000) << "M/" << (totalSamples / 1000000) << "M samples)    " << flush;
-
-        // Create/resize buffers for this batch
+        // Resize buffers for current batch
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, resultBuffer);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, batchSize * sizeof(double), NULL, GL_DYNAMIC_COPY);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, batch_size * sizeof(double), nullptr, GL_DYNAMIC_COPY);
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, resultBufferPlus);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, batchSize * sizeof(double), NULL, GL_DYNAMIC_COPY);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, batch_size * sizeof(double), nullptr, GL_DYNAMIC_COPY);
 
-        // Set uniforms and dispatch compute shader
+        // Set uniforms
         glUseProgram(computeProgram);
 
         glUniform1d(glGetUniformLocation(computeProgram, "emitter_radius"), emitter_radius);
         glUniform1d(glGetUniformLocation(computeProgram, "receiver_distance"), receiver_distance);
         glUniform1d(glGetUniformLocation(computeProgram, "receiver_distance_plus"), receiver_distance_plus);
         glUniform1d(glGetUniformLocation(computeProgram, "receiver_radius"), receiver_radius);
-        glUniform1ui(glGetUniformLocation(computeProgram, "total_samples"), batchSize);
-        glUniform1ui(glGetUniformLocation(computeProgram, "seed_offset"), batchStart);
+        glUniform1ui(glGetUniformLocation(computeProgram, "total_samples"), numSamplesGL);
+        glUniform1ui(glGetUniformLocation(computeProgram, "seed_offset"), seed_offset++);
 
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, resultBuffer);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, resultBufferPlus);
@@ -509,30 +418,22 @@ double get_intersecting_line_density_gpu(
         glDispatchCompute(numGroups, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-        // Reduce results
-        double count = reduceBuffer(resultBuffer, batchSize);
+        // Reduce both buffers
+        double batch_count = reduceBuffer(resultBuffer, numSamplesGL);
+        double batch_count_plus = reduceBuffer(resultBufferPlus, numSamplesGL);
 
-        // Copy plus buffer data for reduction
-        vector<double> plusData(batchSize);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, resultBufferPlus);
-        glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, batchSize * sizeof(double), plusData.data());
+        sum += batch_count;
+        sum_plus += batch_count_plus;
 
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, resultBuffer);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, batchSize * sizeof(double), plusData.data(), GL_DYNAMIC_COPY);
+        remaining -= batch_size;
 
-        double count_plus = reduceBuffer(resultBuffer, batchSize);
-
-        total_count += count;
-        total_count_plus += count_plus;
+        cout << 100.0 - double(remaining) / double(total_samples) * 100.0 << '%' << endl;
     }
 
-    // Print completed
-    cout << "\r    GPU: [";
-    for (int b = 0; b < 30; b++) cout << "=";
-    cout << "] 100% (" << (totalSamples / 1000000) << "M/" << (totalSamples / 1000000) << "M samples)    " << endl;
-
-    return total_count_plus - total_count;
+    return (sum_plus - sum);
 }
+
+
 
 void initGL()
 {
@@ -572,7 +473,7 @@ void runSimulation()
 {
     ofstream outfile("ratio");
 
-    const double emitter_radius_geometrized = sqrt(1e8 * log(2.0) / pi);
+    const double emitter_radius_geometrized = sqrt(1e11 * log(2.0) / pi);
     const double receiver_radius_geometrized = emitter_radius_geometrized * 0.01;
     const double emitter_area_geometrized = 4.0 * pi * emitter_radius_geometrized * emitter_radius_geometrized;
     const double n_geometrized = emitter_area_geometrized / (log(2.0) * 4.0);
