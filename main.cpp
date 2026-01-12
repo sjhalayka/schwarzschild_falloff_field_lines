@@ -247,9 +247,8 @@ real_type get_intersecting_line_density(
 
 	// Get number of hardware threads
 	unsigned int num_threads = std::thread::hardware_concurrency();
-	if (num_threads == 0) num_threads = 4; // Fallback if detection fails
 
-	cout << "Using " << num_threads << " threads for " << n << " iterations" << endl;
+	cout << "Using " << num_threads << " threads for " << double(n) << " iterations" << endl;
 
 	std::vector<std::thread> threads;
 	std::vector<real_type> thread_counts(num_threads, 0);
@@ -321,7 +320,7 @@ int main(int argc, char** argv)
 	ofstream outfile("ratio");
 
 	const real_type emitter_radius_geometrized =
-		sqrt(1e11 * log(2.0) / pi);
+		sqrt(1e12 * log(2.0) / pi);
 
 	const real_type receiver_radius_geometrized =
 		emitter_radius_geometrized * 0.01; // Minimum one Planck unit
