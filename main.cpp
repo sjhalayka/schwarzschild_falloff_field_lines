@@ -372,15 +372,13 @@ double reduceBuffer(GLuint buffer, GLuint size) {
 }
 
 double get_intersecting_line_density_gpu(
-    uint64_t total_samples,                     // ← changed
+    uint64_t total_samples,
     double emitter_radius,
     double receiver_distance,
     double receiver_distance_plus,
     double receiver_radius)
 {
-    // We will process in chunks no larger than what fits comfortably in GLuint
-    const uint64_t MAX_SAMPLES_PER_DISPATCH = 1ULL << 28;   // 268 million — safe & fast on most GPUs
-    // Feel free to increase to 1ULL<<29 or even 1ULL<<30 if GPU has enough memory
+    const uint64_t MAX_SAMPLES_PER_DISPATCH = 1ULL << 20; // << 28;
 
     double sum = 0.0;
     double sum_plus = 0.0;
