@@ -56,19 +56,7 @@ real_type intersect_AABB(const vector_3 min_location, const vector_3 max_locatio
 	return l;
 }
 
-vector_3 random_unit_vector(void)
-{
-	const real_type z = dis(generator) * 2.0 - 1.0;
-	const real_type a = dis(generator) * 2.0 * pi;
-
-	const real_type r = sqrt(1.0f - z * z);
-	const real_type x = r * cos(a);
-	const real_type y = r * sin(a);
-
-	return vector_3(x, y, z).normalize();
-}
-
-std::optional<real_type> intersect(
+real_type intersect(
 	const vector_3 location,
 	const vector_3 normal,
 	const real_type receiver_distance,
@@ -77,90 +65,43 @@ std::optional<real_type> intersect(
 	const vector_3 circle_origin(receiver_distance, 0, 0);
 
 	if (normal.dot(circle_origin) <= 0)
-		return std::nullopt;
+		return 0.0;
 
 	vector_3 min_location(-receiver_radius + receiver_distance, -receiver_radius, -receiver_radius);
 	vector_3 max_location(receiver_radius + receiver_distance, receiver_radius, receiver_radius);
 
 	real_type tmin = 0, tmax = 0;
 
-	real_type AABB_hit = intersect_AABB(min_location, max_location, location, normal, tmin, tmax);
-
-	if (AABB_hit > 0)
-		return AABB_hit;
-
-	return std::nullopt;
+	return intersect_AABB(min_location, max_location, location, normal, tmin, tmax);
 }
-
-vector_3 random_tangent_vector(const vector_3& point_on_sphere)
-{
-	// Normalize to ensure it's on unit sphere
-	vector_3 normal = point_on_sphere;
-	normal.normalize();
-
-	// Choose an arbitrary vector that's not parallel to normal
-	vector_3 arbitrary;
-	if (fabs(normal.x) > 0.9)
-		arbitrary = vector_3(0, 1, 0);  // If normal is mostly along x, use y
-	else
-		arbitrary = vector_3(1, 0, 0);  // Otherwise use x
-
-	// Get first basis vector perpendicular to normal
-	vector_3 tangent1 = normal.cross(arbitrary);
-	tangent1.normalize();
-
-	// Get second basis vector perpendicular to both
-	vector_3 tangent2 = normal.cross(tangent1);
-	tangent2.normalize();
-
-	// Generate random angle for rotation in tangent plane
-	real_type angle = dis(generator) * 2.0 * pi;
-
-	// Combine the two tangent vectors with random weights
-	vector_3 result = tangent1 * cos(angle) + tangent2 * sin(angle);
-
-	return result.normalize();
-}
-
 
 vector_3 random_cosine_weighted_hemisphere(const vector_3& normal)
 {
-	// Generate two random numbers
 	real_type u1 = dis(generator);
 	real_type u2 = dis(generator);
 
-	// Malley's method
-	// (cosine-weighted hemisphere sampling)
-	// Sample uniformly on a disk, 
-	// then project up to hemisphere
 	real_type r = sqrt(u1);
 	real_type theta = 2.0 * pi * u2;
 
-	// Point on unit disk
 	real_type x = r * cos(theta);
 	real_type y = r * sin(theta);
-	real_type z = sqrt(1.0 - u1); // Height above disk
+	real_type z = sqrt(1.0 - u1);
 
-	// Create orthonormal basis around normal
 	vector_3 n = normal;
 	n.normalize();
 
-	// Choose an arbitrary vector not parallel to normal
 	vector_3 arbitrary;
 	if (fabs(n.x) > 0.9)
 		arbitrary = vector_3(0, 1, 0);
 	else
 		arbitrary = vector_3(1, 0, 0);
 
-	// Create tangent and bitangent
 	vector_3 tangent = n.cross(arbitrary);
 	tangent.normalize();
 
 	vector_3 bitangent = n.cross(tangent);
 	bitangent.normalize();
 
-	// Transform from local coordinates
-	// to world coordinates
 	vector_3 result;
 	result.x = tangent.x * x +
 		bitangent.x * y +
@@ -177,6 +118,17 @@ vector_3 random_cosine_weighted_hemisphere(const vector_3& normal)
 	return result.normalize();
 }
 
+vector_3 random_unit_vector(void)
+{
+	const real_type z = dis(generator) * 2.0 - 1.0;
+	const real_type a = dis(generator) * 2.0 * pi;
+
+	const real_type r = sqrt(1.0f - z * z);
+	const real_type x = r * cos(a);
+	const real_type y = r * sin(a);
+
+	return vector_3(x, y, z).normalize();
+}
 
 real_type get_intersecting_line_density(
 	const long long unsigned int n,
@@ -195,7 +147,6 @@ real_type get_intersecting_line_density(
 		if (i % 100000000 == 0)
 			cout << float(i) / float(n) << endl;
 
-		// Random hemisphere outward
 		vector_3 location = random_unit_vector();
 
 		location.x *= emitter_radius;
@@ -209,19 +160,13 @@ real_type get_intersecting_line_density(
 			random_cosine_weighted_hemisphere(
 				surface_normal);
 
-		std::optional<real_type> i_hit = intersect(
+		count += intersect(
 			location, normal,
 			receiver_distance, receiver_radius);
 
-		if (i_hit)
-			count += *i_hit;
-
-		i_hit = intersect(
+		count_plus += intersect(
 			location, normal,
 			receiver_distance_plus, receiver_radius);
-
-		if (i_hit)
-			count_plus += *i_hit;
 	}
 
 	return count_plus - count;
