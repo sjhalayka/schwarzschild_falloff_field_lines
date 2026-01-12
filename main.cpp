@@ -8,7 +8,7 @@
 
 using namespace std;
 
-const double pi = 3.14159265358979323846;
+const double pi = 4.0 * atan(1.0);
 
 // Compute shader source code
 const char* computeShaderSource = R"(
@@ -501,7 +501,8 @@ double get_intersecting_line_density_gpu(
     return count_plus - count;
 }
 
-void initGL() {
+void initGL() 
+{
     // Initialize GLEW
     glewExperimental = GL_TRUE;
     GLenum err = glewInit();
@@ -534,10 +535,11 @@ void initGL() {
     glGenBuffers(1, &resultBufferPlus);
 }
 
-void runSimulation() {
+void runSimulation() 
+{
     ofstream outfile("ratio");
 
-    const double emitter_radius_geometrized = sqrt(1e11 * log(2.0) / pi);
+    const double emitter_radius_geometrized = sqrt(1e8 * log(2.0) / pi);
     const double receiver_radius_geometrized = emitter_radius_geometrized * 0.01;
     const double emitter_area_geometrized = 4.0 * pi * emitter_radius_geometrized * emitter_radius_geometrized;
     const double n_geometrized = emitter_area_geometrized / (log(2.0) * 4.0);
@@ -607,20 +609,23 @@ void runSimulation() {
     cout << "Results written to 'ratio' file." << endl;
 }
 
-void cleanup() {
+void cleanup()
+{
     glDeleteProgram(computeProgram);
     glDeleteProgram(reductionProgram);
     glDeleteBuffers(1, &resultBuffer);
     glDeleteBuffers(1, &resultBufferPlus);
 }
 
-void display() {
+void display() 
+{
     // Empty display callback required by GLUT
     glClear(GL_COLOR_BUFFER_BIT);
     glutSwapBuffers();
 }
 
-void idle() {
+void idle() 
+{
     static bool hasRun = false;
     if (!hasRun) {
         hasRun = true;
@@ -636,7 +641,8 @@ void idle() {
 
 
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) 
+{
     // Initialize GLUT
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
