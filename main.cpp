@@ -103,15 +103,18 @@ vector_3 random_cosine_weighted_hemisphere(const vector_3& normal)
 	bitangent.normalize();
 
 	vector_3 result;
-	result.x = tangent.x * x +
+	result.x = 
+		tangent.x * x +
 		bitangent.x * y +
 		n.x * z;
 
-	result.y = tangent.y * x +
+	result.y = 
+		tangent.y * x +
 		bitangent.y * y +
 		n.y * z;
 
-	result.z = tangent.z * x +
+	result.z = 
+		tangent.z * x +
 		bitangent.z * y +
 		n.z * z;
 
@@ -145,7 +148,7 @@ real_type get_intersecting_line_density(
 	for (long long unsigned int i = 0; i < n; i++)
 	{
 		if (i % 100000000 == 0)
-			cout << float(i) / float(n) << endl;
+			cout << double(i) / double(n) << endl;
 
 		vector_3 location = random_unit_vector();
 
@@ -183,9 +186,7 @@ int main(int argc, char** argv)
 		emitter_radius_geometrized * 0.01; // Minimum one Planck unit
 
 	const real_type emitter_area_geometrized =
-		4.0 * pi
-		* emitter_radius_geometrized
-		* emitter_radius_geometrized;
+		4.0 * pi * pow(emitter_radius_geometrized, 2.0);
 
 	// Field line count
 	const real_type n_geometrized =
@@ -202,7 +203,6 @@ int main(int argc, char** argv)
 
 	real_type end_pos = start_pos * 10;
 
-
 	const size_t pos_res = 10; // Minimum 2 steps
 
 	const real_type pos_step_size =
@@ -211,7 +211,6 @@ int main(int argc, char** argv)
 
 	const real_type epsilon =
 		receiver_radius_geometrized;
-
 
 	for (size_t i = 0; i < pos_res; i++)
 	{
@@ -236,19 +235,12 @@ int main(int argc, char** argv)
 
 		// g variable
 		real_type gradient_strength =
-			-gradient_integer
-			/
-			(2.0 * receiver_radius_geometrized
-				* receiver_radius_geometrized
-				* receiver_radius_geometrized);
-
+			-gradient_integer /
+			(2.0 * pow(receiver_radius_geometrized, 3.0));
+		
 		const real_type a_Newton_geometrized =
-			sqrt(
-				n_geometrized * log(2.0)
-				/
-				(4.0 * pi *
-					pow(receiver_distance_geometrized, 4.0))
-			);
+			sqrt(n_geometrized * log(2.0) /
+				(4.0 * pi * pow(receiver_distance_geometrized, 4.0)));
 
 		const real_type a_flat_geometrized =
 			gradient_strength * receiver_distance_geometrized * log(2)
