@@ -1,4 +1,24 @@
-﻿#include "main.h"
+﻿#include "custom_math.h"
+using custom_math::vector_3;
+
+#include <iostream>
+using std::cout;
+using std::endl;
+
+#include <fstream>
+using std::ofstream;
+using std::ifstream;
+
+#include <utility>
+using std::swap;
+
+#include <random>
+std::mt19937 generator(0);
+std::uniform_real_distribution<real_type> dis(0.0, 1.0);
+
+const real_type pi = 4.0 * atan(1.0);
+
+
 
 real_type intersect_AABB(const vector_3 min_location, const vector_3 max_location, const vector_3 ray_origin, const vector_3 ray_dir, real_type& tmin, real_type& tmax)
 {
