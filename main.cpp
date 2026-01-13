@@ -147,7 +147,7 @@ real_type get_intersecting_line_density(
 
 	for (long long unsigned int i = 0; i < n; i++)
 	{
-		if (i % 100000000 == 0)
+		if (i % 10000000 == 0)
 			cout << double(i) / double(n) << endl;
 
 		vector_3 location = random_unit_vector();
@@ -247,10 +247,13 @@ int main(int argc, char** argv)
 			/ (8.0 * emitter_mass_geometrized);
 
 
-		const real_type dt_Schwarzschild = sqrt(1 - emitter_radius_geometrized / receiver_distance_geometrized);
+		const real_type dt_Schwarzschild = 
+			sqrt(1 - emitter_radius_geometrized / 
+				receiver_distance_geometrized);
 
 		const real_type a_Schwarzschild_geometrized =
-			emitter_radius_geometrized / (pi * pow(receiver_distance_geometrized, 2.0) * dt_Schwarzschild);
+			emitter_radius_geometrized / 
+			(pi * pow(receiver_distance_geometrized, 2.0) * dt_Schwarzschild);
 
 		cout << "a_Schwarzschild_geometrized " << a_Schwarzschild_geometrized << endl;
 		cout << "a_Newton_geometrized " << a_Newton_geometrized << endl;
