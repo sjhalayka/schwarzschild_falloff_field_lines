@@ -99,47 +99,60 @@ real_type intersect(
 
 glm::dvec3 random_cosine_weighted_hemisphere(const glm::dvec3& normal)
 {
-	real_type u1 = dis(generator);
-	real_type u2 = dis(generator);
+	glm::dvec2 r = glm::vec2(dis(generator), dis(generator));
 
-	real_type r = sqrt(u1);
-	real_type theta = 2.0 * pi * u2;
+	glm::dvec3  uu = glm::normalize(glm::cross(normal, glm::dvec3(0.0, 1.0, 1.0)));
+	glm::dvec3  vv = glm::cross(uu, normal);
 
-	real_type x = r * cos(theta);
-	real_type y = r * sin(theta);
-	real_type z = sqrt(1.0 - u1);
+	double ra = sqrt(r.y);
+	double rx = ra * cos(2.0 * pi * r.x);
+	double ry = ra * sin(2.0 * pi * r.x);
+	double rz = sqrt(1.0 - r.y);
+	glm::dvec3 rr = glm::dvec3(rx * uu + ry * vv + rz * normal);
 
-	glm::dvec3 n = normalize(normal);
+	return normalize(rr);
+	
+	//real_type u1 = dis(generator);
+	//real_type u2 = dis(generator);
 
-	glm::dvec3 arbitrary;
-	if (fabs(n.x) > 0.9)
-		arbitrary = glm::dvec3(0, 1, 0);
-	else
-		arbitrary = glm::dvec3(1, 0, 0);
+	//real_type r = sqrt(u1);
+	//real_type theta = 2.0 * pi * u2;
 
-	glm::dvec3 tangent = glm::normalize(glm::cross(n, arbitrary));
-	//tangent.normalize();
+	//real_type x = r * cos(theta);
+	//real_type y = r * sin(theta);
+	//real_type z = sqrt(1.0 - u1);
 
-	glm::dvec3 bitangent = glm::normalize(glm::cross(n, tangent));
-	//bitangent.normalize();
+	//glm::dvec3 n = normalize(normal);
 
-	glm::dvec3 result;
-	result.x = 
-		tangent.x * x +
-		bitangent.x * y +
-		n.x * z;
+	//glm::dvec3 arbitrary;
+	//if (fabs(n.x) > 0.9)
+	//	arbitrary = glm::dvec3(0, 1, 0);
+	//else
+	//	arbitrary = glm::dvec3(1, 0, 0);
 
-	result.y = 
-		tangent.y * x +
-		bitangent.y * y +
-		n.y * z;
+	//glm::dvec3 tangent = glm::normalize(glm::cross(n, arbitrary));
+	////tangent.normalize();
 
-	result.z = 
-		tangent.z * x +
-		bitangent.z * y +
-		n.z * z;
+	//glm::dvec3 bitangent = glm::normalize(glm::cross(n, tangent));
+	////bitangent.normalize();
 
-	return glm::normalize(result);
+	//glm::dvec3 result;
+	//result.x = 
+	//	tangent.x * x +
+	//	bitangent.x * y +
+	//	n.x * z;
+
+	//result.y = 
+	//	tangent.y * x +
+	//	bitangent.y * y +
+	//	n.y * z;
+
+	//result.z = 
+	//	tangent.z * x +
+	//	bitangent.z * y +
+	//	n.z * z;
+
+	//return glm::normalize(result);
 }
 
 glm::dvec3 random_unit_vector(void)
