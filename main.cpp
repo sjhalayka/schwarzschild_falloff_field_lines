@@ -99,10 +99,10 @@ real_type intersect(
 
 glm::dvec3 random_cosine_weighted_hemisphere(const glm::dvec3& normal)
 {
+	// Method 1:
 	glm::dvec2 r = glm::vec2(dis(generator), dis(generator));
-
-	glm::dvec3  uu = glm::normalize(glm::cross(normal, glm::dvec3(0.0, 1.0, 1.0)));
-	glm::dvec3  vv = glm::cross(uu, normal);
+	glm::dvec3 uu = glm::normalize(glm::cross(normal, glm::dvec3(0.0, 1.0, 1.0)));
+	glm::dvec3 vv = glm::cross(uu, normal);
 
 	double ra = sqrt(r.y);
 	double rx = ra * cos(2.0 * pi * r.x);
@@ -112,6 +112,8 @@ glm::dvec3 random_cosine_weighted_hemisphere(const glm::dvec3& normal)
 
 	return normalize(rr);
 	
+
+	// Method 2:
 	//real_type u1 = dis(generator);
 	//real_type u2 = dis(generator);
 
