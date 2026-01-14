@@ -1,5 +1,6 @@
-﻿#include "custom_math.h"
-using custom_math::vector_3;
+﻿#define real_type double
+
+#include <glm/glm.hpp>
 
 #include <iostream>
 using std::cout;
@@ -13,14 +14,15 @@ using std::ifstream;
 using std::swap;
 
 #include <random>
+
+
 std::mt19937 generator(0);
 std::uniform_real_distribution<real_type> dis(0.0, 1.0);
 
 const real_type pi = 4.0 * atan(1.0);
 
 
-
-real_type intersect_AABB(const vector_3 min_location, const vector_3 max_location, const vector_3 ray_origin, const vector_3 ray_dir, real_type& tmin, real_type& tmax)
+real_type intersect_AABB(const glm::dvec3 min_location, const glm::dvec3 max_location, const glm::dvec3 ray_origin, const glm::dvec3 ray_dir, real_type& tmin, real_type& tmax)
 {
 	tmin = (min_location.x - ray_origin.x) / ray_dir.x;
 	tmax = (max_location.x - ray_origin.x) / ray_dir.x;
@@ -61,41 +63,41 @@ real_type intersect_AABB(const vector_3 min_location, const vector_3 max_locatio
 	if (tmin < 0 || tmax < 0)
 		return 0;
 
-	vector_3 ray_hit_start = ray_origin;
+	glm::dvec3 ray_hit_start = ray_origin;
 	ray_hit_start.x += ray_dir.x * tmin;
 	ray_hit_start.y += ray_dir.y * tmin;
 	ray_hit_start.z += ray_dir.z * tmin;
 
-	vector_3 ray_hit_end = ray_origin;
+	glm::dvec3 ray_hit_end = ray_origin;
 	ray_hit_end.x += ray_dir.x * tmax;
 	ray_hit_end.y += ray_dir.y * tmax;
 	ray_hit_end.z += ray_dir.z * tmax;
 
-	real_type l = (ray_hit_end - ray_hit_start).length();
+	real_type l = glm::length(ray_hit_end - ray_hit_start);
 
 	return l;
 }
 
 real_type intersect(
-	const vector_3 location,
-	const vector_3 normal,
+	const glm::dvec3 location,
+	const glm::dvec3 normal,
 	const real_type receiver_distance,
 	const real_type receiver_radius)
 {
-	const vector_3 circle_origin(receiver_distance, 0, 0);
+	const glm::dvec3 circle_origin(receiver_distance, 0, 0);
 
-	if (normal.dot(circle_origin) <= 0)
+	if (glm::dot(normal, circle_origin) <= 0)
 		return 0.0;
 
-	vector_3 min_location(-receiver_radius + receiver_distance, -receiver_radius, -receiver_radius);
-	vector_3 max_location(receiver_radius + receiver_distance, receiver_radius, receiver_radius);
+	glm::dvec3 min_location(-receiver_radius + receiver_distance, -receiver_radius, -receiver_radius);
+	glm::dvec3 max_location(receiver_radius + receiver_distance, receiver_radius, receiver_radius);
 
 	real_type tmin = 0, tmax = 0;
 
 	return intersect_AABB(min_location, max_location, location, normal, tmin, tmax);
 }
 
-vector_3 random_cosine_weighted_hemisphere(const vector_3& normal)
+glm::dvec3 random_cosine_weighted_hemisphere(const glm::dvec3& normal)
 {
 	real_type u1 = dis(generator);
 	real_type u2 = dis(generator);
@@ -107,22 +109,21 @@ vector_3 random_cosine_weighted_hemisphere(const vector_3& normal)
 	real_type y = r * sin(theta);
 	real_type z = sqrt(1.0 - u1);
 
-	vector_3 n = normal;
-	n.normalize();
+	glm::dvec3 n = normalize(normal);
 
-	vector_3 arbitrary;
+	glm::dvec3 arbitrary;
 	if (fabs(n.x) > 0.9)
-		arbitrary = vector_3(0, 1, 0);
+		arbitrary = glm::dvec3(0, 1, 0);
 	else
-		arbitrary = vector_3(1, 0, 0);
+		arbitrary = glm::dvec3(1, 0, 0);
 
-	vector_3 tangent = n.cross(arbitrary);
-	tangent.normalize();
+	glm::dvec3 tangent = glm::normalize(glm::cross(n, arbitrary));
+	//tangent.normalize();
 
-	vector_3 bitangent = n.cross(tangent);
-	bitangent.normalize();
+	glm::dvec3 bitangent = glm::normalize(glm::cross(n, tangent));
+	//bitangent.normalize();
 
-	vector_3 result;
+	glm::dvec3 result;
 	result.x = 
 		tangent.x * x +
 		bitangent.x * y +
@@ -138,10 +139,10 @@ vector_3 random_cosine_weighted_hemisphere(const vector_3& normal)
 		bitangent.z * y +
 		n.z * z;
 
-	return result.normalize();
+	return glm::normalize(result);
 }
 
-vector_3 random_unit_vector(void)
+glm::dvec3 random_unit_vector(void)
 {
 	const real_type z = dis(generator) * 2.0 - 1.0;
 	const real_type a = dis(generator) * 2.0 * pi;
@@ -150,7 +151,7 @@ vector_3 random_unit_vector(void)
 	const real_type x = r * cos(a);
 	const real_type y = r * sin(a);
 
-	return vector_3(x, y, z).normalize();
+	return glm::normalize(glm::dvec3(x, y, z));// .normalize();
 }
 
 real_type get_intersecting_line_density(
@@ -170,16 +171,16 @@ real_type get_intersecting_line_density(
 		if (i % 10000000 == 0)
 			cout << double(i) / double(n) << endl;
 
-		vector_3 location = random_unit_vector();
+		glm::dvec3 location = random_unit_vector();
 
 		location.x *= emitter_radius;
 		location.y *= emitter_radius;
 		location.z *= emitter_radius;
 
-		vector_3 surface_normal = location;
-		surface_normal.normalize();
+		glm::dvec3 surface_normal = normalize(location);/*;
+		surface_normal.normalize();*/
 
-		vector_3 normal =
+		glm::dvec3 normal =
 			random_cosine_weighted_hemisphere(
 				surface_normal);
 
