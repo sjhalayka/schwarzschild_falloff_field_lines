@@ -199,14 +199,14 @@ double get_intersecting_line_density(
 
 
 		// Schwarzschild gravitation
-		//glm::dvec3 normal =
-		//	random_cosine_weighted_hemisphere(
-		//		surface_normal);
+		glm::dvec3 normal =
+			random_cosine_weighted_hemisphere(
+				surface_normal);
 
 
 		// Schwarzschild gravitation using a useful trick
 		// https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
-		glm::dvec3 normal = glm::normalize(surface_normal + random_unit_vector());
+		//glm::dvec3 normal = glm::normalize(surface_normal + random_unit_vector());
 
 
 		// Emulate Quantum Graphity
