@@ -211,9 +211,10 @@ double get_intersecting_line_density(
 
 		// Emulate Quantum Graphity
 		//glm::dvec3 normal = glm::normalize(random_unit_vector() * emitter_radius - random_unit_vector() * emitter_radius);
-		//
-		//if (dot(normal, surface_normal) < 0)
-		//	surface_normal = -surface_normal;
+
+
+		if (dot(normal, surface_normal) < 0)
+			surface_normal = -surface_normal;
 
 
 
