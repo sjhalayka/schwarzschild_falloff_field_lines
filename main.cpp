@@ -191,34 +191,34 @@ double get_intersecting_line_density(
 		location.y *= emitter_radius;
 		location.z *= emitter_radius;
 
-		glm::dvec3 surface_normal = glm::normalize(location);
+		glm::dvec3 surface_normal = 
+			glm::normalize(location);
 
 
-		// Newtonian gravitation
-		// glm::dvec3 normal = surface_normal;
+		// A) Newtonian gravitation
+		//glm::dvec3 normal = 
+		//	surface_normal;
 
+		// B) Schwarzschild gravitation
+		//glm::dvec3 normal = 
+		//	random_cosine_weighted_hemisphere(
+		//		surface_normal);
 
-		// Schwarzschild gravitation
-		glm::dvec3 normal =
-			random_cosine_weighted_hemisphere(
-				surface_normal);
-
-
-		// Schwarzschild gravitation using a useful trick
+		// C) Schwarzschild gravitation using a useful trick
 		// https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
-		//glm::dvec3 normal = glm::normalize(surface_normal + random_unit_vector());
+		//glm::dvec3 normal = 
+		//	glm::normalize(
+		//		surface_normal + 
+		//		random_unit_vector());
 
-
-		// Emulate Quantum Graphity
-		//glm::dvec3 normal = glm::normalize(random_unit_vector() * emitter_radius - random_unit_vector() * emitter_radius);
-
+		// D) Emulate Quantum Graphity
+		glm::dvec3 normal = 
+			glm::normalize(
+				location - 
+				random_unit_vector() * emitter_radius);
 
 		if (dot(normal, surface_normal) < 0)
-			surface_normal = -surface_normal;
-
-
-
-
+			normal = -normal;
 
 
 		count += intersect(
@@ -238,7 +238,7 @@ int main(int argc, char** argv)
 	ofstream outfile("ratio");
 
 	const double emitter_radius_geometrized =
-		sqrt(1e8 * log(2.0) / pi);
+		sqrt(1e10 * log(2.0) / pi);
 
 	const double receiver_radius_geometrized =
 		emitter_radius_geometrized * 0.01; // Minimum one Planck unit
