@@ -1,27 +1,14 @@
-﻿#include <glm/glm.hpp>
+﻿#include "main.h"
+#include <thread>
+#include <vector>
+#include <atomic>
+#include <chrono>
+#include <iomanip>
 
-#include <iostream>
-using std::cout;
-using std::endl;
+// Atomic counter for progress tracking
+std::atomic<long long unsigned int> global_progress(0);
 
-#include <fstream>
-using std::ofstream;
-
-#include <utility>
-using std::swap;
-
-#include <cmath>
-
-#include <random>
-
-
-std::mt19937 generator(0);
-std::uniform_real_distribution<double> dis(0.0, 1.0);
-
-const double pi = 4.0 * atan(1.0);
-
-
-double intersect_AABB(const glm::dvec3 min_location, const glm::dvec3 max_location, const glm::dvec3 ray_origin, const glm::dvec3 ray_dir, double& tmin, double& tmax)
+real_type intersect_AABB(const vector_3 min_location, const vector_3 max_location, const vector_3 ray_origin, const vector_3 ray_dir, real_type& tmin, real_type& tmax)
 {
 	tmin = (min_location.x - ray_origin.x) / ray_dir.x;
 	tmax = (max_location.x - ray_origin.x) / ray_dir.x;
@@ -29,8 +16,8 @@ double intersect_AABB(const glm::dvec3 min_location, const glm::dvec3 max_locati
 	if (tmin > tmax)
 		swap(tmin, tmax);
 
-	double tymin = (min_location.y - ray_origin.y) / ray_dir.y;
-	double tymax = (max_location.y - ray_origin.y) / ray_dir.y;
+	real_type tymin = (min_location.y - ray_origin.y) / ray_dir.y;
+	real_type tymax = (max_location.y - ray_origin.y) / ray_dir.y;
 
 	if (tymin > tymax)
 		swap(tymin, tymax);
@@ -44,8 +31,8 @@ double intersect_AABB(const glm::dvec3 min_location, const glm::dvec3 max_locati
 	if (tymax < tmax)
 		tmax = tymax;
 
-	double tzmin = (min_location.z - ray_origin.z) / ray_dir.z;
-	double tzmax = (max_location.z - ray_origin.z) / ray_dir.z;
+	real_type tzmin = (min_location.z - ray_origin.z) / ray_dir.z;
+	real_type tzmax = (max_location.z - ray_origin.z) / ray_dir.z;
 
 	if (tzmin > tzmax)
 		swap(tzmin, tzmax);
@@ -62,223 +49,328 @@ double intersect_AABB(const glm::dvec3 min_location, const glm::dvec3 max_locati
 	if (tmin < 0 || tmax < 0)
 		return 0;
 
-	glm::dvec3 ray_hit_start = ray_origin;
+	vector_3 ray_hit_start = ray_origin;
 	ray_hit_start.x += ray_dir.x * tmin;
 	ray_hit_start.y += ray_dir.y * tmin;
 	ray_hit_start.z += ray_dir.z * tmin;
 
-	glm::dvec3 ray_hit_end = ray_origin;
+	vector_3 ray_hit_end = ray_origin;
 	ray_hit_end.x += ray_dir.x * tmax;
 	ray_hit_end.y += ray_dir.y * tmax;
 	ray_hit_end.z += ray_dir.z * tmax;
 
-	double l = glm::length(ray_hit_end - ray_hit_start);
+	real_type l = (ray_hit_end - ray_hit_start).length();
 
 	return l;
 }
 
-double intersect(
-	const glm::dvec3 location,
-	const glm::dvec3 normal,
-	const double receiver_distance,
-	const double receiver_radius)
+real_type intersect(
+	const vector_3 location,
+	const vector_3 normal,
+	const real_type receiver_distance,
+	const real_type receiver_radius)
 {
-	const glm::dvec3 circle_origin(receiver_distance, 0, 0);
+	const vector_3 circle_origin(receiver_distance, 0, 0);
 
-	if (glm::dot(normal, circle_origin) <= 0)
+	if (normal.dot(circle_origin) <= 0)
 		return 0.0;
 
-	glm::dvec3 min_location(-receiver_radius + receiver_distance, -receiver_radius, -receiver_radius);
-	glm::dvec3 max_location(receiver_radius + receiver_distance, receiver_radius, receiver_radius);
+	vector_3 min_location(-receiver_radius + receiver_distance, -receiver_radius, -receiver_radius);
+	vector_3 max_location(receiver_radius + receiver_distance, receiver_radius, receiver_radius);
 
-	double tmin = 0, tmax = 0;
+	real_type tmin = 0, tmax = 0;
 
 	return intersect_AABB(min_location, max_location, location, normal, tmin, tmax);
 }
 
-glm::dvec3 random_cosine_weighted_hemisphere(const glm::dvec3& normal)
+// Thread-local versions of random functions that take generator and distribution as parameters
+vector_3 random_cosine_weighted_hemisphere(vector_3 normal,
+	std::mt19937& local_gen, std::uniform_real_distribution<real_type>& local_dis)
 {
-	// Method 1:
-	glm::dvec2 r = glm::vec2(dis(generator), dis(generator));
-	glm::dvec3 uu = glm::normalize(glm::cross(normal, glm::dvec3(0.0, 1.0, 1.0)));
-	glm::dvec3 vv = glm::cross(uu, normal);
+	vector_3 r = vector_3(dis(generator), dis(generator), 0.0);
+	vector_3 uu = normal.cross(vector_3(0.0, 1.0, 1.0)).normalize();
+	vector_3 vv = uu.cross(normal);
 
 	double ra = sqrt(r.y);
 	double rx = ra * cos(2.0 * pi * r.x);
 	double ry = ra * sin(2.0 * pi * r.x);
 	double rz = sqrt(1.0 - r.y);
-	glm::dvec3 rr = glm::dvec3(rx * uu + ry * vv + rz * normal);
+	vector_3 rr = vector_3(uu*rx + vv*ry + normal*rz);
 
-	return normalize(rr);
-
-
-	// Method 2:
-	//double u1 = dis(generator);
-	//double u2 = dis(generator);
-
-	//double r = sqrt(u1);
-	//double theta = 2.0 * pi * u2;
-
-	//double x = r * cos(theta);
-	//double y = r * sin(theta);
-	//double z = sqrt(1.0 - u1);
-
-	//glm::dvec3 n = normalize(normal);
-
-	//glm::dvec3 arbitrary;
-	//if (fabs(n.x) > 0.9)
-	//	arbitrary = glm::dvec3(0, 1, 0);
-	//else
-	//	arbitrary = glm::dvec3(1, 0, 0);
-
-	//glm::dvec3 tangent = glm::normalize(glm::cross(n, arbitrary));
-	////tangent.normalize();
-
-	//glm::dvec3 bitangent = glm::normalize(glm::cross(n, tangent));
-	////bitangent.normalize();
-
-	//glm::dvec3 result;
-	//result.x = 
-	//	tangent.x * x +
-	//	bitangent.x * y +
-	//	n.x * z;
-
-	//result.y = 
-	//	tangent.y * x +
-	//	bitangent.y * y +
-	//	n.y * z;
-
-	//result.z = 
-	//	tangent.z * x +
-	//	bitangent.z * y +
-	//	n.z * z;
-
-	//return glm::normalize(result);
+	return rr.normalize();
 }
 
-glm::dvec3 random_unit_vector(void)
+vector_3 random_unit_vector(std::mt19937& local_gen, std::uniform_real_distribution<real_type>& local_dis)
 {
-	const double z = dis(generator) * 2.0 - 1.0;
-	const double a = dis(generator) * 2.0 * pi;
+	const real_type z = local_dis(local_gen) * 2.0 - 1.0;
+	const real_type a = local_dis(local_gen) * 2.0 * pi;
 
-	const double r = sqrt(1.0f - z * z);
-	const double x = r * cos(a);
-	const double y = r * sin(a);
+	const real_type r = sqrt(1.0f - z * z);
+	const real_type x = r * cos(a);
+	const real_type y = r * sin(a);
 
-	return glm::normalize(glm::dvec3(x, y, z));
+	return vector_3(x, y, z).normalize();
 }
 
-double get_intersecting_line_density(
-	const long long unsigned int n,
-	const double emitter_radius,
-	const double receiver_distance,
-	const double receiver_distance_plus,
-	const double receiver_radius)
+// Worker function for each thread
+void worker_thread(
+	long long unsigned int start_idx,
+	long long unsigned int end_idx,
+	unsigned int thread_seed,
+	const real_type emitter_radius,
+	const real_type receiver_distance,
+	const real_type receiver_distance_plus,
+	const real_type receiver_radius,
+	real_type& result_count,
+	real_type& result_count_plus)
 {
-	double count = 0;
-	double count_plus = 0;
+	// Thread-local random number generator
+	std::mt19937 local_gen(thread_seed);
+	std::uniform_real_distribution<real_type> local_dis(0.0, 1.0);
 
-	generator.seed(static_cast<unsigned>(0));
+	real_type local_count = 0;
+	real_type local_count_plus = 0;
 
-	for (long long unsigned int i = 0; i < n; i++)
+	// Update progress every N iterations to reduce atomic overhead
+	const long long unsigned int progress_update_interval = 10000;
+	long long unsigned int local_progress = 0;
+
+	for (long long unsigned int i = start_idx; i < end_idx; i++)
 	{
-		if (i % 10000000 == 0)
-			cout << double(i) / double(n) << endl;
-
-		glm::dvec3 location = random_unit_vector();
+		vector_3 location = random_unit_vector(local_gen, local_dis);
 
 		location.x *= emitter_radius;
 		location.y *= emitter_radius;
 		location.z *= emitter_radius;
 
-		glm::dvec3 surface_normal = 
-			glm::normalize(location);
+		vector_3 surface_normal = location;
+		surface_normal.normalize();
+
+		//vector_3 normal =
+		//	random_cosine_weighted_hemisphere(
+		//		surface_normal, local_gen, local_dis);
 
 
 		// A) Newtonian gravitation
-		//glm::dvec3 normal = 
+		//vector_3 normal =
 		//	surface_normal;
 
 		// B) Schwarzschild gravitation
-		//glm::dvec3 normal = 
+		//vector_3 normal = 
 		//	random_cosine_weighted_hemisphere(
-		//		surface_normal);
+		//		surface_normal, local_gen, local_dis);
 
 		// C) Schwarzschild gravitation using a useful trick
 		// https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
-		//glm::dvec3 normal = 
-		//	glm::normalize(
-		//		surface_normal + 
-		//		random_unit_vector());
+		//vector_3 normal = 
+		//	(surface_normal + 
+		//		random_unit_vector(local_gen, local_dis)).normalize();
 
 		// D) Emulate Quantum Graphity
-		glm::dvec3 normal = 
-			glm::normalize(
-				location - 
-				random_unit_vector() * emitter_radius);
+		vector_3 normal = location;
 
-		if (dot(normal, surface_normal) < 0)
+		vector_3 r = random_unit_vector(local_gen, local_dis);
+		r.x *= emitter_radius;
+		r.y *= emitter_radius;
+		r.z *= emitter_radius;
+
+		normal = (location - r).normalize();
+
+		if (normal.dot(surface_normal) < 0)
 			normal = -normal;
 
 
-		count += intersect(
+		local_count += intersect(
 			location, normal,
 			receiver_distance, receiver_radius);
 
-		count_plus += intersect(
+		local_count_plus += intersect(
 			location, normal,
 			receiver_distance_plus, receiver_radius);
+
+		// Update global progress periodically
+		local_progress++;
+		if (local_progress >= progress_update_interval)
+		{
+			global_progress.fetch_add(local_progress, std::memory_order_relaxed);
+			local_progress = 0;
+		}
 	}
 
-	return count_plus - count;
+	// Add any remaining progress
+	if (local_progress > 0)
+	{
+		global_progress.fetch_add(local_progress, std::memory_order_relaxed);
+	}
+
+	result_count = local_count;
+	result_count_plus = local_count_plus;
+}
+
+// Progress monitor function that runs on main thread
+void progress_monitor(long long unsigned int total_iterations, std::atomic<bool>& done)
+{
+	auto start_time = std::chrono::steady_clock::now();
+
+	while (!done.load(std::memory_order_relaxed))
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+		long long unsigned int current = global_progress.load(std::memory_order_relaxed);
+		double progress = static_cast<double>(current) / static_cast<double>(total_iterations);
+
+		auto now = std::chrono::steady_clock::now();
+		auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - start_time).count();
+
+		// Estimate time remaining
+		double eta_seconds = 0;
+		if (progress > 0.001)
+		{
+			eta_seconds = (elapsed / progress) * (1.0 - progress);
+		}
+
+		cout << "\rProgress: " << fixed << (progress * 100.0) << "% "
+			<< "| Elapsed: " << elapsed << "s "
+			<< "| ETA: " << static_cast<int>(eta_seconds) << "s    " << flush;
+	}
+
+	cout << "\rProgress: 100.00% | Complete!                              " << endl;
+}
+
+real_type get_intersecting_line_density(
+	const long long unsigned int n,
+	const real_type emitter_radius,
+	const real_type receiver_distance,
+	const real_type receiver_distance_plus,
+	const real_type receiver_radius)
+{
+	// Reset global progress counter
+	global_progress.store(0, std::memory_order_relaxed);
+
+	// Get number of hardware threads
+	unsigned int num_threads = std::thread::hardware_concurrency();
+	if (num_threads == 0) num_threads = 4; // Fallback if detection fails
+
+	cout << "Using " << num_threads << " threads for " << n << " iterations" << endl;
+
+	std::vector<std::thread> threads;
+	std::vector<real_type> thread_counts(num_threads, 0);
+	std::vector<real_type> thread_counts_plus(num_threads, 0);
+
+	// Flag to signal progress monitor to stop
+	std::atomic<bool> done(false);
+
+	// Start progress monitor thread
+	std::thread monitor_thread(progress_monitor, n, std::ref(done));
+
+	// Calculate work distribution
+	long long unsigned int iterations_per_thread = n / num_threads;
+	long long unsigned int remainder = n % num_threads;
+
+	long long unsigned int current_start = 0;
+
+	for (unsigned int t = 0; t < num_threads; t++)
+	{
+		long long unsigned int thread_iterations = iterations_per_thread;
+		if (t < remainder) thread_iterations++; // Distribute remainder
+
+		long long unsigned int thread_end = current_start + thread_iterations;
+
+		// Each thread gets a different seed based on thread index
+		unsigned int thread_seed = t;
+
+		threads.emplace_back(
+			worker_thread,
+			current_start,
+			thread_end,
+			thread_seed,
+			emitter_radius,
+			receiver_distance,
+			receiver_distance_plus,
+			receiver_radius,
+			std::ref(thread_counts[t]),
+			std::ref(thread_counts_plus[t])
+		);
+
+		current_start = thread_end;
+	}
+
+	// Wait for all worker threads to complete
+	for (auto& t : threads)
+	{
+		t.join();
+	}
+
+	// Signal monitor thread to stop and wait for it
+	done.store(true, std::memory_order_relaxed);
+	monitor_thread.join();
+
+	// Aggregate results
+	real_type total_count = 0;
+	real_type total_count_plus = 0;
+
+	for (unsigned int t = 0; t < num_threads; t++)
+	{
+		total_count += thread_counts[t];
+		total_count_plus += thread_counts_plus[t];
+	}
+
+	return total_count_plus - total_count;
 }
 
 int main(int argc, char** argv)
 {
 	ofstream outfile("ratio");
 
-	const double emitter_radius_geometrized =
-		sqrt(1e10 * log(2.0) / pi);
+	const real_type emitter_radius_geometrized =
+		sqrt(1e11 * log(2.0) / pi);
 
-	const double receiver_radius_geometrized =
+	const real_type receiver_radius_geometrized =
 		emitter_radius_geometrized * 0.01; // Minimum one Planck unit
 
-	const double emitter_area_geometrized =
-		4.0 * pi * pow(emitter_radius_geometrized, 2.0);
+	const real_type emitter_area_geometrized =
+		4.0 * pi
+		* emitter_radius_geometrized
+		* emitter_radius_geometrized;
 
 	// Field line count
-	const double n_geometrized =
+	const real_type n_geometrized =
 		emitter_area_geometrized
 		/ (log(2.0) * 4.0);
 
-	const double emitter_mass_geometrized =
+	const real_type emitter_mass_geometrized =
 		emitter_radius_geometrized
 		/ 2.0;
 
-	double start_pos =
+	real_type start_pos =
 		emitter_radius_geometrized
 		+ receiver_radius_geometrized;
 
-	double end_pos = start_pos * 10;
+	real_type end_pos = start_pos * 10;
+
 
 	const size_t pos_res = 10; // Minimum 2 steps
 
-	const double pos_step_size =
+	const real_type pos_step_size =
 		(end_pos - start_pos)
 		/ (pos_res - 1);
 
-	const double epsilon =
+	const real_type epsilon =
 		receiver_radius_geometrized;
+
 
 	for (size_t i = 0; i < pos_res; i++)
 	{
-		const double receiver_distance_geometrized =
+		cout << "\n=== Step " << (i + 1) << " of " << pos_res << " ===" << endl;
+
+		const real_type receiver_distance_geometrized =
 			start_pos + i * pos_step_size;
 
-		const double receiver_distance_plus_geometrized =
+		const real_type receiver_distance_plus_geometrized =
 			receiver_distance_geometrized + epsilon;
 
-		const double collision_count_plus_minus_collision_count =
+		// beta function
+		const real_type collision_count_plus_minus_collision_count =
 			get_intersecting_line_density(
 				static_cast<long long unsigned int>(n_geometrized),
 				emitter_radius_geometrized,
@@ -287,31 +379,35 @@ int main(int argc, char** argv)
 				receiver_radius_geometrized);
 
 		// alpha variable
-		const double gradient_integer =
+		const real_type gradient_integer =
 			collision_count_plus_minus_collision_count
 			/ epsilon;
 
 		// g variable
-		double gradient_strength =
-			-gradient_integer /
-			(2.0 * pow(receiver_radius_geometrized, 3.0));
+		real_type gradient_strength =
+			-gradient_integer
+			/
+			(2.0 * receiver_radius_geometrized
+				* receiver_radius_geometrized
+				* receiver_radius_geometrized);
 
-		const double a_Newton_geometrized =
-			sqrt(n_geometrized * log(2.0) /
-				(4.0 * pi * pow(receiver_distance_geometrized, 4.0)));
+		const real_type a_Newton_geometrized =
+			sqrt(
+				n_geometrized * log(2.0)
+				/
+				(4.0 * pi *
+					pow(receiver_distance_geometrized, 4.0))
+			);
 
-		const double a_flat_geometrized =
+		const real_type a_flat_geometrized =
 			gradient_strength * receiver_distance_geometrized * log(2)
 			/ (8.0 * emitter_mass_geometrized);
 
 
-		const double dt_Schwarzschild =
-			sqrt(1 - emitter_radius_geometrized /
-				receiver_distance_geometrized);
+		const real_type dt_Schwarzschild = sqrt(1 - emitter_radius_geometrized / receiver_distance_geometrized);
 
-		const double a_Schwarzschild_geometrized =
-			emitter_radius_geometrized /
-			(pi * pow(receiver_distance_geometrized, 2.0) * dt_Schwarzschild);
+		const real_type a_Schwarzschild_geometrized =
+			emitter_radius_geometrized / (pi * pow(receiver_distance_geometrized, 2.0) * dt_Schwarzschild);
 
 		cout << "a_Schwarzschild_geometrized " << a_Schwarzschild_geometrized << endl;
 		cout << "a_Newton_geometrized " << a_Newton_geometrized << endl;
@@ -326,8 +422,5 @@ int main(int argc, char** argv)
 			(a_Schwarzschild_geometrized / a_flat_geometrized) <<
 			endl;
 	}
+
 }
-
-
-
-
