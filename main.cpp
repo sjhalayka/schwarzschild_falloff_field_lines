@@ -146,10 +146,6 @@ void worker_thread(
 		vector_3 surface_normal = location;
 		surface_normal.normalize();
 
-		//vector_3 normal =
-		//	random_cosine_weighted_hemisphere(
-		//		surface_normal, local_gen, local_dis);
-
 
 		// A) Newtonian gravitation
 		//vector_3 normal =
@@ -323,7 +319,7 @@ int main(int argc, char** argv)
 	ofstream outfile("ratio");
 
 	const real_type emitter_radius_geometrized =
-		sqrt(1e9 * log(2.0) / pi);
+		sqrt(1e10 * log(2.0) / pi);
 
 	const real_type receiver_radius_geometrized =
 		emitter_radius_geometrized * 0.01; // Minimum one Planck unit
