@@ -152,9 +152,9 @@ void worker_thread(
 		//	surface_normal;
 
 		// B) Schwarzschild gravitation
-		vector_3 normal = 
-			random_cosine_weighted_hemisphere(
-				surface_normal, local_gen, local_dis);
+		//vector_3 normal = 
+		//	random_cosine_weighted_hemisphere(
+		//		surface_normal, local_gen, local_dis);
 
 		// C) Schwarzschild gravitation using a useful trick
 		// https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
@@ -163,17 +163,12 @@ void worker_thread(
 		//		random_unit_vector(local_gen, local_dis)).normalize();
 
 		// D) Emulate Quantum Graphity
-		//vector_3 normal = location;
+		vector_3 r = random_unit_vector(local_gen, local_dis);
+		r.x *= emitter_radius;
+		r.y *= emitter_radius;
+		r.z *= emitter_radius;
 
-		//vector_3 r = random_unit_vector(local_gen, local_dis);
-		//r.x *= emitter_radius;
-		//r.y *= emitter_radius;
-		//r.z *= emitter_radius;
-
-		//normal = (location - r).normalize();
-
-		//if (normal.dot(surface_normal) < 0)
-		//	normal = -normal;
+		vector_3 normal = (location - r).normalize();
 
 
 		local_count += intersect(
