@@ -156,14 +156,9 @@ void worker_thread(
 		//	random_cosine_weighted_hemisphere(
 		//		surface_normal, local_gen, local_dis);
 
-		// C) Schwarzschild gravitation using a useful trick
-		// https://pema.dev/obsidian/math/light-transport/cosine-weighted-sampling.html
-		//vector_3 normal = 
-		//	(surface_normal + 
-		//		random_unit_vector(local_gen, local_dis)).normalize();
-
-		// D) Emulate Quantum Graphity
+		// C) Emulate Quantum Graphity
 		vector_3 r = random_unit_vector(local_gen, local_dis);
+
 		r.x *= emitter_radius;
 		r.y *= emitter_radius;
 		r.z *= emitter_radius;
@@ -314,7 +309,7 @@ int main(int argc, char** argv)
 	ofstream outfile("ratio");
 
 	const real_type emitter_radius_geometrized =
-		sqrt(1e10 * log(2.0) / pi);
+		sqrt(1e8 * log(2.0) / pi);
 
 	const real_type receiver_radius_geometrized =
 		emitter_radius_geometrized * 0.01; // Minimum one Planck unit
