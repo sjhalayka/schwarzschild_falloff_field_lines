@@ -151,12 +151,12 @@ void worker_thread(
 		//vector_3 normal =
 		//	surface_normal;
 
-		// B) Schwarzschild gravitation
+		// B) Schwarzschild gravitation, classical
 		//vector_3 normal = 
 		//	random_cosine_weighted_hemisphere(
 		//		surface_normal, local_gen, local_dis);
 
-		// C) Emulate Quantum Graphity
+		// C) Schwarzschild gravitation, quantum
 		vector_3 r = random_unit_vector(local_gen, local_dis);
 
 		r.x *= emitter_radius;
