@@ -306,10 +306,12 @@ real_type get_intersecting_line_density(
 
 int main(int argc, char** argv)
 {
-	ofstream outfile("ratio");
+	ofstream outfile_numerical("Schwarzschild_numerical");
+	ofstream outfile_analytical("Schwarzschild_analytical");
+	ofstream outfile_Newton("Newton_analytical");
 
 	const real_type emitter_radius_geometrized =
-		sqrt(1e10 * log(2.0) / pi);
+		sqrt(1e11 * log(2.0) / pi);
 
 	const real_type receiver_radius_geometrized =
 		emitter_radius_geometrized * 0.01; // Minimum one Planck unit
@@ -332,10 +334,10 @@ int main(int argc, char** argv)
 		emitter_radius_geometrized
 		+ receiver_radius_geometrized;
 
-	real_type end_pos = start_pos * 10;
+	real_type end_pos = start_pos * 2;
 
 
-	const size_t pos_res = 10; // Minimum 2 steps
+	const size_t pos_res = 30; // Minimum 2 steps
 
 	const real_type pos_step_size =
 		(end_pos - start_pos)
@@ -403,10 +405,16 @@ int main(int argc, char** argv)
 		cout << a_Newton_geometrized / a_flat_geometrized << endl;
 		cout << endl << endl;
 
-		outfile << receiver_distance_geometrized <<
-			" " <<
-			(a_Schwarzschild_geometrized / a_flat_geometrized) <<
-			endl;
+
+		outfile_numerical << receiver_distance_geometrized << " " << a_flat_geometrized << endl;
+		outfile_analytical << receiver_distance_geometrized << " " << a_Schwarzschild_geometrized << endl;
+		outfile_Newton << receiver_distance_geometrized << " " << a_Newton_geometrized << endl;
+
+
+		//outfile << receiver_distance_geometrized <<
+		//	" " <<
+		//	(a_Schwarzschild_geometrized / a_flat_geometrized) <<
+		//	endl;
 	}
 
 }
