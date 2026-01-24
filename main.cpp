@@ -334,7 +334,7 @@ int main(int argc, char** argv)
 		emitter_radius_geometrized
 		+ receiver_radius_geometrized;
 
-	real_type end_pos = start_pos * 2;
+	real_type end_pos = start_pos * 2.0;
 
 
 	const size_t pos_res = 30; // Minimum 2 steps
