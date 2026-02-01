@@ -4,78 +4,9 @@
 #include <atomic>
 #include <chrono>
 #include <iomanip>
-#include <complex>
 
 // Atomic counter for progress tracking
 std::atomic<long long unsigned int> global_progress(0);
-
-
-real_type mean(const vector<real_type>& src)
-{
-	real_type mean = 0;
-	real_type size = static_cast<real_type>(src.size());
-
-	for (size_t i = 0; i < src.size(); i++)
-		mean += src[i];
-
-	mean /= size;
-
-	return mean;
-}
-
-real_type standard_deviation(const vector<real_type>& src)
-{
-	real_type size = static_cast<real_type>(src.size());
-
-	real_type m = mean(src);
-	real_type sq_diff = 0;
-
-	for (size_t i = 0; i < src.size(); i++)
-	{
-		real_type diff = src[i] - m;
-		sq_diff += diff * diff;
-	}
-
-	sq_diff /= size;
-
-	return sqrt(sq_diff);
-}
-
-
-real_type regline_slope(const vector<complex<real_type>>& xy)
-{
-	real_type x_mean = 0;
-	real_type y_mean = 0;
-
-	for (size_t i = 0; i < xy.size(); i++)
-	{
-		x_mean += xy[i].real();
-		y_mean += xy[i].imag();
-	}
-
-	x_mean /= xy.size();
-	y_mean /= xy.size();
-
-	real_type covariance = 0;
-	real_type variance = 0;
-
-	for (size_t i = 0; i < xy.size(); i++)
-	{
-		real_type z = xy[i].real() - x_mean;
-		covariance += z * (xy[i].imag() - y_mean);
-		variance += z * z;
-	}
-
-	// These two divisions can be commented out
-	// because they do not affect the ratio of
-	// covariance and variance
-	covariance /= xy.size();
-	variance /= xy.size();
-
-	return covariance / variance;
-}
-
-
 
 real_type intersect_AABB(const vector_3 min_location, const vector_3 max_location, const vector_3 ray_origin, const vector_3 ray_dir, real_type& tmin, real_type& tmax)
 {
@@ -164,7 +95,7 @@ vector_3 random_cosine_weighted_hemisphere(vector_3 normal,
 	double rx = ra * cos(2.0 * pi * r.x);
 	double ry = ra * sin(2.0 * pi * r.x);
 	double rz = sqrt(1.0 - r.y);
-	vector_3 rr = vector_3(uu*rx + vv*ry + normal*rz);
+	vector_3 rr = vector_3(uu * rx + vv * ry + normal * rz);
 
 	return rr.normalize();
 }
@@ -284,7 +215,7 @@ void progress_monitor(long long unsigned int total_iterations, std::atomic<bool>
 			eta_seconds = (elapsed / progress) * (1.0 - progress);
 		}
 
-		cout << "\rProgress: "  << (progress * 100.0) << "% "
+		cout << "\rProgress: " << fixed << (progress * 100.0) << "% "
 			<< "| Elapsed: " << elapsed << "s "
 			<< "| ETA: " << static_cast<int>(eta_seconds) << "s    " << flush;
 	}
@@ -304,7 +235,7 @@ real_type get_intersecting_line_density(
 
 	// Get number of hardware threads
 	unsigned int num_threads = std::thread::hardware_concurrency();
-	if (num_threads == 0) num_threads = 1; // Fallback if detection fails
+	if (num_threads == 0) num_threads = 4; // Fallback if detection fails
 
 	cout << "Using " << num_threads << " threads for " << n << " iterations" << endl;
 
@@ -332,7 +263,7 @@ real_type get_intersecting_line_density(
 		long long unsigned int thread_end = current_start + thread_iterations;
 
 		// Each thread gets a different seed based on thread index
-		unsigned int thread_seed = t + static_cast<unsigned int>(time(0));
+		unsigned int thread_seed = t + static_cast<unsigned>(time(0));
 
 		threads.emplace_back(
 			worker_thread,
@@ -373,62 +304,17 @@ real_type get_intersecting_line_density(
 	return total_count_plus - total_count;
 }
 
-
-
-real_type kilograms_to_planck_units(real_type kg)
-{
-	return kg / 2.176e-8;
-}
-
-
-real_type planck_units_to_AU(real_type num)
-{
-	real_type au = 1.08e-46;
-
-	return au * num;
-}
-
-real_type planck_units_to_kiloparsecs(real_type num)
-{
-	real_type kpc = 5.24e-55;
-
-	return kpc * num;
-}
-
 int main(int argc, char** argv)
 {
-	//vector<complex<real_type>> v =
-	//{
-	//	complex<real_type>(1e8, 11163.5),
-	//	 complex<real_type>(2e8, 19327.3),
-	//	 complex<real_type>(3e8, 23007.3),
-	//	 complex<real_type>(4e8, 30159.8),
-	//	 complex<real_type>(5e8, 35563.3),
-	//	 complex<real_type>(6e8, 38597),
-	//	 complex<real_type>(7e8, 43559.3),
-	//	 complex<real_type>(8e8, 51564.1),
-	//	 complex<real_type>(9e8, 55310.3)
-	//};
-
-	//cout << regline_slope(v) * 1e8 << endl;
-	//return 0;
-
-
-
-
-
-
-
-	const real_type emitter_mass_geometrized =
-		kilograms_to_planck_units(8.54e36);// Sag A* mass in planck masses
-		//kilograms_to_planck_units(5.9722e24);// Earth mass in planck masses
-		//kilograms_to_planck_units(3.285e23);// Mercury in planck masses
-		//kilograms_to_planck_units(1);// 1 kilogram in planck masses
-
-
+	//ofstream outfile_numerical("Schwarzschild_numerical");
+	//ofstream outfile_analytical("Schwarzschild_analytical");
+	//ofstream outfile_Newton("Newton_analytical");
 
 	const real_type emitter_radius_geometrized =
-		emitter_mass_geometrized * 2.0;
+		sqrt(1e8 * log(2.0) / pi);
+
+	const real_type receiver_radius_geometrized =
+		emitter_radius_geometrized * 0.01; // Minimum one Planck unit
 
 	const real_type emitter_area_geometrized =
 		4.0 * pi
@@ -440,170 +326,115 @@ int main(int argc, char** argv)
 		emitter_area_geometrized
 		/ (log(2.0) * 4.0);
 
-	//cout << n_geometrized << endl;
+	const real_type emitter_mass_geometrized =
+		emitter_radius_geometrized
+		/ 2.0;
 
-	//real_type onset_distance = n_geometrized / 18580.0 + 7347;
-	real_type d = 0.01845 * pow(n_geometrized, 0.723);
+	real_type start_pos =
+		emitter_radius_geometrized
+		+ receiver_radius_geometrized;
 
-	cout << "onset distance: " << d << endl;
-
-	real_type sd = 0.0486 * pow(n_geometrized, 0.614);
-	
-	cout << planck_units_to_AU(d) << " +/- " << planck_units_to_AU(sd) << endl;
-
-	return 0;
+	real_type end_pos = start_pos * 10.0;
 
 
+	const size_t pos_res = 30; // Minimum 2 steps
+
+	const real_type pos_step_size =
+		(end_pos - start_pos)
+		/ (pos_res - 1);
+
+	const real_type epsilon =
+		receiver_radius_geometrized;
+
+	const size_t num_samples = 50;
+
+	vector<long long signed int> values(pos_res, 0);
+
+	for (size_t s = 0; s < num_samples; s++)
+	{
+		for (size_t i = 0; i < pos_res; i++)
+		{
+			cout << "\n=== Sample " << (s + 1) << " of " << num_samples << ", Step " << (i + 1) << " of " << pos_res << " ===" << endl;
+
+			const real_type receiver_distance_geometrized =
+				start_pos + i * pos_step_size;
+
+			const real_type receiver_distance_plus_geometrized =
+				receiver_distance_geometrized + epsilon;
+
+			// beta function
+			const real_type collision_count_plus_minus_collision_count =
+				get_intersecting_line_density(
+					static_cast<long long unsigned int>(n_geometrized),
+					emitter_radius_geometrized,
+					receiver_distance_geometrized,
+					receiver_distance_plus_geometrized,
+					receiver_radius_geometrized);
+
+			// alpha variable
+			const real_type gradient_integer =
+				collision_count_plus_minus_collision_count
+				/ epsilon;
+
+			// g variable
+			real_type gradient_strength =
+				-gradient_integer
+				/
+				(2.0 * receiver_radius_geometrized
+					* receiver_radius_geometrized
+					* receiver_radius_geometrized);
+
+			const real_type a_Newton_geometrized =
+				sqrt(
+					n_geometrized * log(2.0)
+					/
+					(4.0 * pi *
+						pow(receiver_distance_geometrized, 4.0))
+				);
+
+			const real_type a_flat_geometrized =
+				gradient_strength * receiver_distance_geometrized * log(2)
+				/ (8.0 * emitter_mass_geometrized);
 
 
+			const real_type dt_Schwarzschild = sqrt(1 - emitter_radius_geometrized / receiver_distance_geometrized);
+
+			const real_type a_Schwarzschild_geometrized =
+				emitter_radius_geometrized / (pi * pow(receiver_distance_geometrized, 2.0) * dt_Schwarzschild);
+
+			cout << "a_Schwarzschild_geometrized " << a_Schwarzschild_geometrized << endl;
+			cout << "a_Newton_geometrized " << a_Newton_geometrized << endl;
+			cout << "a_flat_geometrized " << a_flat_geometrized << endl;
+			cout << a_Schwarzschild_geometrized / a_flat_geometrized << endl;
+			cout << endl;
+			cout << a_Newton_geometrized / a_flat_geometrized << endl;
+			cout << endl << endl;
+
+			if (a_flat_geometrized < 0)
+				values[i]--;
+			else if(a_flat_geometrized > 0)
+				values[i]++;
 
 
+			//outfile_numerical << receiver_distance_geometrized << " " << a_flat_geometrized << endl;
+			//outfile_analytical << receiver_distance_geometrized << " " << a_Schwarzschild_geometrized << endl;
+			//outfile_Newton << receiver_distance_geometrized << " " << a_Newton_geometrized << endl;
 
 
-	//ofstream outfile_numerical("1e8_Schwarzschild_numerical");
-	//ofstream outfile_analytical("Schwarzschild_analytical");
-	//ofstream outfile_Newton("Newton_analytical");
+			//outfile << receiver_distance_geometrized <<
+			//	" " <<
+			//	(a_Schwarzschild_geometrized / a_flat_geometrized) <<
+			//	endl;
+		}
+	}
 
-	//vector<real_type> scale_values;
+	ofstream outfile_values("values.txt");
 
-	//const real_type emitter_radius_geometrized =
-	//	sqrt(9e10 * log(2.0) / pi);
+	for (size_t i = 0; i < pos_res; i++)
+	{
+		const real_type receiver_distance_geometrized =
+			start_pos + i * pos_step_size;
 
-	//const real_type receiver_radius_geometrized =
-	//	emitter_radius_geometrized * 0.01; // Minimum one Planck unit
-
-	//const real_type emitter_area_geometrized =
-	//	4.0 * pi
-	//	* emitter_radius_geometrized
-	//	* emitter_radius_geometrized;
-
-	//// Field line count
-	//const real_type n_geometrized =
-	//	emitter_area_geometrized
-	//	/ (log(2.0) * 4.0);
-
-	//const real_type emitter_mass_geometrized =
-	//	emitter_radius_geometrized
-	//	/ 2.0;
-
-	//real_type start_pos =
-	//	emitter_radius_geometrized
-	//	+ receiver_radius_geometrized;
-
-	//real_type end_pos = start_pos * 20.0;
-
-
-	//const size_t pos_res = 60; // Minimum 2 steps
-
-	//const real_type pos_step_size =
-	//	(end_pos - start_pos)
-	//	/ (pos_res - 1);
-
-	//const real_type epsilon =
-	//	receiver_radius_geometrized;
-
-	//const size_t max_samples = 50;
-	//size_t sample_count = 0;
-
-	//for (size_t i = 0; i < pos_res;)
-	//{
-	//	cout << "\n=== Step " << (i + 1) << " of " << pos_res << " ===" << endl;
-
-	//	const real_type receiver_distance_geometrized =
-	//		start_pos + i * pos_step_size;
-
-	//	const real_type receiver_distance_plus_geometrized =
-	//		receiver_distance_geometrized + epsilon;
-
-	//	// beta function
-	//	const real_type collision_count_plus_minus_collision_count =
-	//		get_intersecting_line_density(
-	//			static_cast<long long unsigned int>(n_geometrized),
-	//			emitter_radius_geometrized,
-	//			receiver_distance_geometrized,
-	//			receiver_distance_plus_geometrized,
-	//			receiver_radius_geometrized);
-
-	//	// alpha variable
-	//	const real_type gradient_integer =
-	//		collision_count_plus_minus_collision_count
-	//		/ epsilon;
-
-	//	// g variable
-	//	real_type gradient_strength =
-	//		-gradient_integer
-	//		/
-	//		(2.0 * receiver_radius_geometrized
-	//			* receiver_radius_geometrized
-	//			* receiver_radius_geometrized);
-
-	//	const real_type a_Newton_geometrized =
-	//		sqrt(
-	//			n_geometrized * log(2.0)
-	//			/
-	//			(4.0 * pi *
-	//				pow(receiver_distance_geometrized, 4.0))
-	//		);
-
-	//	const real_type a_flat_geometrized =
-	//		gradient_strength * receiver_distance_geometrized * log(2)
-	//		/ (8.0 * emitter_mass_geometrized);
-
-
-	//	const real_type dt_Schwarzschild = sqrt(1 - emitter_radius_geometrized / receiver_distance_geometrized);
-
-	//	const real_type a_Schwarzschild_geometrized =
-	//		emitter_radius_geometrized / (pi * pow(receiver_distance_geometrized, 2.0) * dt_Schwarzschild);
-
-	//	//cout << "a_Schwarzschild_geometrized " << a_Schwarzschild_geometrized << endl;
-	//	//cout << "a_Newton_geometrized " << a_Newton_geometrized << endl;
-	//	//cout << "a_flat_geometrized " << a_flat_geometrized << endl;
-	//	//cout << a_Schwarzschild_geometrized / a_flat_geometrized << endl;
-	//	//cout << endl;
-	//	//cout << a_Newton_geometrized / a_flat_geometrized << endl;
-	//	//cout << endl << endl;
-
-
-	//	if (gradient_strength < 0)
-	//	{
-	//		scale_values.push_back(receiver_distance_geometrized);
-
-	//		cout << '\n';
-	//		cout << "negative found\n";
-	//		cout << "VALUE: " << a_flat_geometrized << '\n';
-	//		cout << "SCALE: " << receiver_distance_geometrized  << endl;
-
-	//		sample_count++;
-
-	//		cout << "Sample count: " << sample_count << " of " << max_samples << endl;
-
-	//		if (sample_count >= max_samples)
-	//		{
-	//			cout << mean(scale_values) << " +/- " << standard_deviation(scale_values) << endl;
-	//			break;
-	//		}
-
-	//		i = 0;
-	//		continue;
-	//	}
-	//	else
-	//		i++;
-
-
-
-
-
-	//	//outfile_numerical << receiver_distance_geometrized << " " << a_flat_geometrized << endl;
-	//	
-	//	
-	//	//outfile_analytical << receiver_distance_geometrized << " " << a_Schwarzschild_geometrized << endl;
-	//	//outfile_Newton << receiver_distance_geometrized << " " << a_Newton_geometrized << endl;
-
-
-	//	//outfile << receiver_distance_geometrized <<
-	//	//	" " <<
-	//	//	(a_Schwarzschild_geometrized / a_flat_geometrized) <<
-	//	//	endl;
-	//}
-
+		outfile_values << receiver_distance_geometrized << " " << values[i] << endl;
+	}
 }
