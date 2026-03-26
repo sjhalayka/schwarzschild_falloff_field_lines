@@ -8,6 +8,9 @@
 // Atomic counter for progress tracking
 std::atomic<long long unsigned int> global_progress(0);
 
+// Histogram settings
+const size_t HIST_BINS = 1000;
+
 real_type intersect_AABB(const vector_3 min_location, const vector_3 max_location, const vector_3 ray_origin, const vector_3 ray_dir, real_type& tmin, real_type& tmax)
 {
 	tmin = (min_location.x - ray_origin.x) / ray_dir.x;
@@ -122,7 +125,8 @@ void worker_thread(
 	const real_type receiver_distance_plus,
 	const real_type receiver_radius,
 	real_type& result_count,
-	real_type& result_count_plus)
+	real_type& result_count_plus,
+	std::vector<long long unsigned int>& histogram)
 {
 	// Thread-local random number generator
 	std::mt19937 local_gen(thread_seed);
@@ -165,7 +169,12 @@ void worker_thread(
 
 		vector_3 normal = (location - r).normalize();
 		double wavelength = (location - r).length();
-		double frequency = 1.0 / wavelength;
+
+		// Bin the wavelength into histogram [0, 2*emitter_radius]
+		double max_wavelength = 2.0 * emitter_radius;
+		size_t bin = static_cast<size_t>(wavelength / max_wavelength * HIST_BINS);
+		if (bin >= HIST_BINS) bin = HIST_BINS - 1;
+		histogram[bin]++;
 
 		local_count += intersect(
 			location, normal,
@@ -229,7 +238,8 @@ real_type get_intersecting_line_density(
 	const real_type emitter_radius,
 	const real_type receiver_distance,
 	const real_type receiver_distance_plus,
-	const real_type receiver_radius)
+	const real_type receiver_radius,
+	std::vector<long long unsigned int>& accumulated_histogram)
 {
 	// Reset global progress counter
 	global_progress.store(0, std::memory_order_relaxed);
@@ -243,6 +253,7 @@ real_type get_intersecting_line_density(
 	std::vector<std::thread> threads;
 	std::vector<real_type> thread_counts(num_threads, 0);
 	std::vector<real_type> thread_counts_plus(num_threads, 0);
+	std::vector<std::vector<long long unsigned int>> thread_histograms(num_threads, std::vector<long long unsigned int>(HIST_BINS, 0));
 
 	// Flag to signal progress monitor to stop
 	std::atomic<bool> done(false);
@@ -276,7 +287,8 @@ real_type get_intersecting_line_density(
 			receiver_distance_plus,
 			receiver_radius,
 			std::ref(thread_counts[t]),
-			std::ref(thread_counts_plus[t])
+			std::ref(thread_counts_plus[t]),
+			std::ref(thread_histograms[t])
 		);
 
 		current_start = thread_end;
@@ -300,6 +312,8 @@ real_type get_intersecting_line_density(
 	{
 		total_count += thread_counts[t];
 		total_count_plus += thread_counts_plus[t];
+		for (size_t b = 0; b < HIST_BINS; b++)
+			accumulated_histogram[b] += thread_histograms[t][b];
 	}
 
 	return total_count_plus - total_count;
@@ -347,6 +361,8 @@ int main(int argc, char** argv)
 	const real_type epsilon =
 		receiver_radius_geometrized;
 
+	// Wavelength histogram accumulated across all steps
+	std::vector<long long unsigned int> wavelength_histogram(HIST_BINS, 0);
 
 	for (size_t i = 0; i < pos_res; i++)
 	{
@@ -365,7 +381,8 @@ int main(int argc, char** argv)
 				emitter_radius_geometrized,
 				receiver_distance_geometrized,
 				receiver_distance_plus_geometrized,
-				receiver_radius_geometrized);
+				receiver_radius_geometrized,
+				wavelength_histogram);
 
 		// alpha variable
 		const real_type gradient_integer =
@@ -410,6 +427,31 @@ int main(int argc, char** argv)
 		outfile_numerical << receiver_distance_geometrized << " " << a_flat_geometrized << endl;
 		outfile_analytical << receiver_distance_geometrized << " " << a_Schwarzschild_geometrized << endl;
 		outfile_Newton << receiver_distance_geometrized << " " << a_Newton_geometrized << endl;
+
+
+		// Write wavelength histogram to file
+		// Columns: bin_center  count
+		// With c = G = hbar = 1 (Planck units), wavelength is in Planck lengths
+		ofstream outfile_histogram("wavelength_histogram");
+		const real_type max_wavelength = 2.0 * emitter_radius_geometrized;
+		const real_type bin_width = max_wavelength / HIST_BINS;
+
+		for (size_t b = 0; b < HIST_BINS; b++)
+		{
+			real_type bin_center = (b + 0.5) * bin_width;
+			outfile_histogram << bin_center << " " << wavelength_histogram[b] << endl;
+		}
+
+		outfile_histogram.close();
+		cout << "Wavelength histogram written to 'wavelength_histogram'" << endl;
+		cout << "  Bin width: " << bin_width << " (Planck lengths)" << endl;
+		cout << "  Range: [0, " << max_wavelength << "]" << endl;
+		cout << "  gnuplot: plot 'wavelength_histogram' with boxes" << endl;
+		
+		exit(0);
+
+
 	}
+
 
 }
