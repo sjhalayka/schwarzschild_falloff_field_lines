@@ -95,7 +95,7 @@ vector_3 random_cosine_weighted_hemisphere(vector_3 normal,
 	double rx = ra * cos(2.0 * pi * r.x);
 	double ry = ra * sin(2.0 * pi * r.x);
 	double rz = sqrt(1.0 - r.y);
-	vector_3 rr = vector_3(uu * rx + vv * ry + normal * rz);
+	vector_3 rr = vector_3(uu*rx + vv*ry + normal*rz);
 
 	return rr.normalize();
 }
@@ -263,7 +263,7 @@ real_type get_intersecting_line_density(
 		long long unsigned int thread_end = current_start + thread_iterations;
 
 		// Each thread gets a different seed based on thread index
-		unsigned int thread_seed = t + static_cast<unsigned>(time(0));
+		unsigned int thread_seed = t;
 
 		threads.emplace_back(
 			worker_thread,
@@ -306,12 +306,12 @@ real_type get_intersecting_line_density(
 
 int main(int argc, char** argv)
 {
-	//ofstream outfile_numerical("Schwarzschild_numerical");
-	//ofstream outfile_analytical("Schwarzschild_analytical");
-	//ofstream outfile_Newton("Newton_analytical");
+	ofstream outfile_numerical("Schwarzschild_numerical");
+	ofstream outfile_analytical("Schwarzschild_analytical");
+	ofstream outfile_Newton("Newton_analytical");
 
 	const real_type emitter_radius_geometrized =
-		sqrt(1e8 * log(2.0) / pi);
+		sqrt(1e9 * log(2.0) / pi);
 
 	const real_type receiver_radius_geometrized =
 		emitter_radius_geometrized * 0.01; // Minimum one Planck unit
@@ -334,7 +334,7 @@ int main(int argc, char** argv)
 		emitter_radius_geometrized
 		+ receiver_radius_geometrized;
 
-	real_type end_pos = start_pos * 10.0;
+	real_type end_pos = start_pos * 2.0;
 
 
 	const size_t pos_res = 30; // Minimum 2 steps
@@ -346,95 +346,69 @@ int main(int argc, char** argv)
 	const real_type epsilon =
 		receiver_radius_geometrized;
 
-	const size_t num_samples = 50;
-
-	vector<long long signed int> values(pos_res, 0);
-
-	for (size_t s = 0; s < num_samples; s++)
-	{
-		for (size_t i = 0; i < pos_res; i++)
-		{
-			cout << "\n=== Sample " << (s + 1) << " of " << num_samples << ", Step " << (i + 1) << " of " << pos_res << " ===" << endl;
-
-			const real_type receiver_distance_geometrized =
-				start_pos + i * pos_step_size;
-
-			const real_type receiver_distance_plus_geometrized =
-				receiver_distance_geometrized + epsilon;
-
-			// beta function
-			const real_type collision_count_plus_minus_collision_count =
-				get_intersecting_line_density(
-					static_cast<long long unsigned int>(n_geometrized),
-					emitter_radius_geometrized,
-					receiver_distance_geometrized,
-					receiver_distance_plus_geometrized,
-					receiver_radius_geometrized);
-
-			// alpha variable
-			const real_type gradient_integer =
-				collision_count_plus_minus_collision_count
-				/ epsilon;
-
-			// g variable
-			real_type gradient_strength =
-				-gradient_integer
-				/
-				(2.0 * receiver_radius_geometrized
-					* receiver_radius_geometrized
-					* receiver_radius_geometrized);
-
-			const real_type a_Newton_geometrized =
-				sqrt(
-					n_geometrized * log(2.0)
-					/
-					(4.0 * pi *
-						pow(receiver_distance_geometrized, 4.0))
-				);
-
-			const real_type a_flat_geometrized =
-				gradient_strength * receiver_distance_geometrized * log(2)
-				/ (8.0 * emitter_mass_geometrized);
-
-
-			const real_type dt_Schwarzschild = sqrt(1 - emitter_radius_geometrized / receiver_distance_geometrized);
-
-			const real_type a_Schwarzschild_geometrized =
-				emitter_radius_geometrized / (pi * pow(receiver_distance_geometrized, 2.0) * dt_Schwarzschild);
-
-			cout << "a_Schwarzschild_geometrized " << a_Schwarzschild_geometrized << endl;
-			cout << "a_Newton_geometrized " << a_Newton_geometrized << endl;
-			cout << "a_flat_geometrized " << a_flat_geometrized << endl;
-			cout << a_Schwarzschild_geometrized / a_flat_geometrized << endl;
-			cout << endl;
-			cout << a_Newton_geometrized / a_flat_geometrized << endl;
-			cout << endl << endl;
-
-			if (a_flat_geometrized < 0)
-				values[i]--;
-			else if(a_flat_geometrized > 0)
-				values[i]++;
-
-
-			//outfile_numerical << receiver_distance_geometrized << " " << a_flat_geometrized << endl;
-			//outfile_analytical << receiver_distance_geometrized << " " << a_Schwarzschild_geometrized << endl;
-			//outfile_Newton << receiver_distance_geometrized << " " << a_Newton_geometrized << endl;
-
-
-			//outfile << receiver_distance_geometrized <<
-			//	" " <<
-			//	(a_Schwarzschild_geometrized / a_flat_geometrized) <<
-			//	endl;
-		}
-	}
-
-	ofstream outfile_values("values.txt");
 
 	for (size_t i = 0; i < pos_res; i++)
 	{
+		cout << "\n=== Step " << (i + 1) << " of " << pos_res << " ===" << endl;
+
 		const real_type receiver_distance_geometrized =
 			start_pos + i * pos_step_size;
 
-		outfile_values << receiver_distance_geometrized << " " << values[i] << endl;
+		const real_type receiver_distance_plus_geometrized =
+			receiver_distance_geometrized + epsilon;
+
+		// beta function
+		const real_type collision_count_plus_minus_collision_count =
+			get_intersecting_line_density(
+				static_cast<long long unsigned int>(n_geometrized),
+				emitter_radius_geometrized,
+				receiver_distance_geometrized,
+				receiver_distance_plus_geometrized,
+				receiver_radius_geometrized);
+
+		// alpha variable
+		const real_type gradient_integer =
+			collision_count_plus_minus_collision_count
+			/ epsilon;
+
+		// g variable
+		real_type gradient_strength =
+			-gradient_integer
+			/
+			(2.0 * receiver_radius_geometrized
+				* receiver_radius_geometrized
+				* receiver_radius_geometrized);
+
+		const real_type a_Newton_geometrized =
+			sqrt(
+				n_geometrized * log(2.0)
+				/
+				(4.0 * pi *
+					pow(receiver_distance_geometrized, 4.0))
+			);
+
+		const real_type a_flat_geometrized =
+			gradient_strength * receiver_distance_geometrized * log(2)
+			/ (8.0 * emitter_mass_geometrized);
+
+
+		const real_type dt_Schwarzschild = sqrt(1 - emitter_radius_geometrized / receiver_distance_geometrized);
+
+		const real_type a_Schwarzschild_geometrized =
+			emitter_radius_geometrized / (pi * pow(receiver_distance_geometrized, 2.0) * dt_Schwarzschild);
+
+		cout << "a_Schwarzschild_geometrized " << a_Schwarzschild_geometrized << endl;
+		cout << "a_Newton_geometrized " << a_Newton_geometrized << endl;
+		cout << "a_flat_geometrized " << a_flat_geometrized << endl;
+		cout << a_Schwarzschild_geometrized / a_flat_geometrized << endl;
+		cout << endl;
+		cout << a_Newton_geometrized / a_flat_geometrized << endl;
+		cout << endl << endl;
+
+
+		outfile_numerical << receiver_distance_geometrized << " " << a_flat_geometrized << endl;
+		outfile_analytical << receiver_distance_geometrized << " " << a_Schwarzschild_geometrized << endl;
+		outfile_Newton << receiver_distance_geometrized << " " << a_Newton_geometrized << endl;
 	}
+
 }
