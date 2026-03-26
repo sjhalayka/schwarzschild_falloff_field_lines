@@ -95,7 +95,7 @@ vector_3 random_cosine_weighted_hemisphere(vector_3 normal,
 	double rx = ra * cos(2.0 * pi * r.x);
 	double ry = ra * sin(2.0 * pi * r.x);
 	double rz = sqrt(1.0 - r.y);
-	vector_3 rr = vector_3(uu*rx + vv*ry + normal*rz);
+	vector_3 rr = vector_3(uu * rx + vv * ry + normal * rz);
 
 	return rr.normalize();
 }
@@ -164,7 +164,8 @@ void worker_thread(
 		r.z *= emitter_radius;
 
 		vector_3 normal = (location - r).normalize();
-
+		double wavelength = (location - r).length();
+		double frequency = 1.0 / wavelength;
 
 		local_count += intersect(
 			location, normal,
